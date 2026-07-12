@@ -196,6 +196,73 @@
   to   { transform: translateX(-50%); }
 }
 
+@keyframes trace-highlight {
+  from { stroke-dashoffset: 0; }
+  to { stroke-dashoffset: -100; }
+}
+
+@keyframes hero-gradient-shift {
+  0%, 100% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+}
+
+@keyframes copy-breathe {
+  0%, 100% { color: hsl(var(--primary)); }
+  50% { color: hsl(var(--foreground)); }
+}
+
+.signal-trace {
+  height: 56px;
+  color: hsl(var(--primary));
+  mask-image: linear-gradient(to right, transparent, black 4%, black 96%, transparent);
+  -webkit-mask-image: linear-gradient(to right, transparent, black 4%, black 96%, transparent);
+}
+
+.signal-trace-track {
+  display: block;
+  width: 200%;
+  height: 100%;
+  animation: trace-scroll 14s linear infinite;
+  will-change: transform;
+}
+
+.signal-trace-track.is-static {
+  animation: none;
+}
+
+.signal-trace-base {
+  opacity: 0.28;
+}
+
+.signal-trace-highlight {
+  opacity: 0.85;
+  stroke-dasharray: 7 93;
+  animation: trace-highlight 5s linear infinite;
+  filter: drop-shadow(0 0 3px hsl(var(--primary) / 0.5));
+}
+
+.hero-gradient-text {
+  color: hsl(var(--foreground));
+  background-image: linear-gradient(
+    105deg,
+    hsl(var(--foreground)) 5%,
+    hsl(var(--primary)) 42%,
+    hsl(199 80% 48%) 62%,
+    hsl(var(--foreground)) 95%
+  );
+  background-size: 220% auto;
+  background-clip: text;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  animation: hero-gradient-shift 7s ease-in-out infinite;
+}
+
+.hero-copy-accent {
+  color: hsl(var(--primary));
+  font-weight: 600;
+  animation: copy-breathe 4s ease-in-out infinite;
+}
+
 @keyframes led-pulse {
   0%, 100% { box-shadow: 0 0 0 0 rgba(47, 168, 79, 0.4); }
   50%       { box-shadow: 0 0 0 4px rgba(47, 168, 79, 0); }

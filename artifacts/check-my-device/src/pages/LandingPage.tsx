@@ -42,26 +42,32 @@ const TRACE_D = ONE_CYCLE + ' ' + shiftPath(ONE_CYCLE, 1440).replace('M1440,30',
 
 function ScrollingTrace() {
   const shouldReduce = useReducedMotion();
+
   return (
-    <div className="w-full overflow-hidden" style={{ height: 56 }} aria-hidden="true">
+    <div className="signal-trace w-full overflow-hidden" aria-hidden="true">
       <svg
+        className={shouldReduce ? 'signal-trace-track is-static' : 'signal-trace-track'}
         viewBox="0 0 2880 56"
         preserveAspectRatio="none"
-        style={{
-          width: '200%',
-          height: '100%',
-          ...(shouldReduce
-            ? {}
-            : { animation: 'trace-scroll 10s linear infinite' }),
-        }}
       >
         <path
           d={TRACE_D}
           fill="none"
           stroke="currentColor"
-          strokeWidth="1.5"
-          className="text-primary"
-          opacity="0.45"
+          strokeWidth="1.35"
+          className="signal-trace-base text-primary"
+          vectorEffect="non-scaling-stroke"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        />
+        <path
+          d={TRACE_D}
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2"
+          pathLength="100"
+          className="signal-trace-highlight text-primary"
+          vectorEffect="non-scaling-stroke"
           strokeLinecap="round"
           strokeLinejoin="round"
         />
@@ -106,7 +112,7 @@ function AnimatedHeadline() {
           <AnimatedWord key={i} word={w} delay={BASE + i * STEP} />
         ))}
       </span>
-      <span className="block relative">
+      <span className="block hero-gradient-text">
         {line2.map((w, i) => (
           <AnimatedWord
             key={i}
@@ -115,16 +121,44 @@ function AnimatedHeadline() {
             last={i === line2.length - 1}
           />
         ))}
-        {/* Underline draws after last word */}
-        <motion.span
-          className="absolute -bottom-1 left-0 h-[2.5px] rounded-full bg-primary block"
-          initial={{ width: 0 }}
-          animate={{ width: '100%' }}
-          transition={{ delay: BASE + (line1.length + line2.length) * STEP + 0.1, duration: 0.6, ease: EASE }}
-          aria-hidden="true"
-        />
       </span>
     </h1>
+  );
+}
+
+function AnimatedDescription() {
+  const shouldReduce = useReducedMotion();
+  const phrases = [
+    'Nine hardware tests.',
+    'No accounts,',
+    'no plugins,',
+    'no data collection.',
+    'Open the page,',
+    'run the tests,',
+  ];
+
+  return (
+    <p className="text-[1rem] md:text-[1.1rem] text-muted-foreground max-w-xl mx-auto mb-10 leading-relaxed">
+      {phrases.map((phrase, index) => (
+        <motion.span
+          key={phrase}
+          className="inline-block mr-[0.28em]"
+          initial={shouldReduce ? {} : { opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.72 + index * 0.07, duration: 0.45, ease: EASE }}
+        >
+          {phrase}
+        </motion.span>
+      ))}
+      <motion.span
+        className="hero-copy-accent inline-block"
+        initial={shouldReduce ? {} : { opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 1.14, duration: 0.5, ease: EASE }}
+      >
+        trust the results.
+      </motion.span>
+    </p>
   );
 }
 
@@ -209,13 +243,7 @@ export function LandingPage() {
             {/* Headline with word animation */}
             <AnimatedHeadline />
 
-            <motion.p
-              {...fadeUp(0.75)}
-              className="text-[1rem] md:text-[1.1rem] text-muted-foreground max-w-lg mx-auto mb-10 leading-relaxed"
-            >
-              Nine hardware tests. No accounts, no plugins, no data collection.
-              Open the page, run the tests, trust the results.
-            </motion.p>
+            <AnimatedDescription />
 
             <motion.div {...fadeUp(0.88)} className="flex flex-col sm:flex-row items-center justify-center gap-3 mb-14">
               <Button
