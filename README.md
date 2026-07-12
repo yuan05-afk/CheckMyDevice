@@ -26,50 +26,41 @@ Each result is untested, working, issue, or unsupported. Results Summary combine
 
 Prerequisites:
 
-- A current Node.js release compatible with the lockfile
+- Node.js 22.12 or newer
 - pnpm (npm and Yarn are intentionally rejected)
 
 From the repository root:
 
 ```sh
 pnpm install --frozen-lockfile
-```
-
-The frontend requires `PORT` and `BASE_PATH`. On macOS, Linux, or another POSIX shell:
-
-```sh
-PORT=5173 BASE_PATH=/ pnpm --filter @workspace/check-my-device run dev
-```
-
-On PowerShell:
-
-```powershell
-$env:PORT='5173'
-$env:BASE_PATH='/'
-pnpm --filter @workspace/check-my-device run dev
+pnpm dev
 ```
 
 Open `http://localhost:5173`. Use localhost or HTTPS so permission-gated APIs have a secure context.
+The default port is 5173. Override it only when needed, for example
+`$env:PORT='4173'; pnpm dev` in PowerShell.
 
 ## Production build
 
 ```sh
-PORT=5173 BASE_PATH=/ pnpm --filter @workspace/check-my-device run build
-```
-
-PowerShell:
-
-```powershell
-$env:PORT='5173'; $env:BASE_PATH='/'; pnpm --filter @workspace/check-my-device run build
+pnpm run build:app
+pnpm preview
 ```
 
 Static output is written to `artifacts/check-my-device/dist/public/`. Set `BASE_PATH` to its deployment URL prefix, such as `/` for a domain root.
+
+## Deploy to Vercel
+
+Import the GitHub repository into Vercel and keep the repository root as the
+project root. The included `vercel.json` installs with pnpm, builds only the
+CheckMyDevice frontend, publishes its static output, and supports client-side
+routes such as `/dashboard` and `/test/camera`.
 
 Useful validation commands:
 
 ```sh
 pnpm run typecheck
-PORT=5173 BASE_PATH=/ pnpm run build
+pnpm run build:app
 ```
 
 The root build includes scaffold packages. For product work, the filtered frontend build is faster and more representative.

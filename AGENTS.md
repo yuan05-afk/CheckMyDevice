@@ -15,7 +15,6 @@ CheckMyDevice is a browser-only hardware diagnostics app for checking a computer
 - `lib/api-spec/`, `lib/api-zod/`, `lib/api-client-react/` — unused OpenAPI, generated Zod, and React Query client scaffolding. The frontend has a workspace dependency on the client but makes no API requests.
 - `artifacts/mockup-sandbox/` — Replit design-preview tooling, not the shipped product.
 - `scripts/` — workspace utility scripts.
-- `replit.md` — legacy Replit template; this file and `README.md` supersede it.
 
 Do not modify the API server, database, API libraries, or mockup sandbox unless a task explicitly brings them into scope.
 
