@@ -1,6 +1,6 @@
-import { useRef, useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Link } from 'wouter';
-import { motion, useReducedMotion, AnimatePresence } from 'framer-motion';
+import { motion, useReducedMotion } from 'framer-motion';
 import { useTheme } from 'next-themes';
 import {
   Activity,
@@ -19,62 +19,116 @@ import {
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
-/* ─── Signal Trace ─────────────────────────────────────────────── */
-// EKG / oscilloscope path spanning full hero width
-const TRACE_D =
-  'M0,60 L60,60 L75,60 L82,12 L88,108 L94,60 L160,60 ' +
-  'L168,60 L172,72 L176,48 L180,60 L260,60 ' +
-  'L270,60 L278,8 L285,112 L292,60 L380,60 ' +
-  'L388,60 L392,68 L396,52 L400,60 L510,60 ' +
-  'L520,60 L528,15 L535,105 L542,60 L640,60 ' +
-  'L648,60 L652,70 L656,50 L660,60 L780,60 ' +
-  'L790,60 L797,18 L804,102 L811,60 L920,60 ' +
-  'L928,60 L932,66 L936,54 L940,60 L1060,60 ' +
-  'L1070,60 L1077,20 L1084,100 L1091,60 L1200,60 ' +
-  'L1210,60 L1214,64 L1218,56 L1222,60 L1440,60';
+/* ─── Scrolling EKG trace ──────────────────────────
+   Two identical 1440-wide patterns side-by-side (2880 total).
+   CSS scrolls left by 50% (one pattern width) then loops seamlessly.
+──────────────────────────────────────────────────── */
+const ONE_CYCLE =
+  'M0,30 L110,30 L120,30 L128,4 L135,56 L142,30 ' +
+  'L260,30 L268,30 L272,37 L276,23 L280,30 ' +
+  'L440,30 L450,30 L458,6 L465,54 L472,30 ' +
+  'L640,30 L646,30 L650,35 L654,25 L658,30 ' +
+  'L850,30 L860,30 L868,5 L876,55 L884,30 ' +
+  'L1060,30 L1066,30 L1070,36 L1074,24 L1078,30 ' +
+  'L1440,30';
 
-function SignalTrace({ visible }: { visible: boolean }) {
-  const shouldReduce = useReducedMotion();
-  const pathRef = useRef<SVGPathElement>(null);
-  const [len, setLen] = useState(2000);
-
-  useEffect(() => {
-    if (pathRef.current) {
-      setLen(pathRef.current.getTotalLength());
-    }
-  }, []);
-
-  return (
-    <svg
-      viewBox="0 0 1440 120"
-      preserveAspectRatio="none"
-      className="absolute inset-x-0 top-1/2 -translate-y-1/2 w-full h-28 pointer-events-none"
-      aria-hidden="true"
-    >
-      <path
-        ref={pathRef}
-        d={TRACE_D}
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="1.5"
-        className="text-primary"
-        style={
-          shouldReduce
-            ? { opacity: 0.25 }
-            : {
-                strokeDasharray: len,
-                strokeDashoffset: visible ? 0 : len,
-                transition: `stroke-dashoffset 1.4s cubic-bezier(0.22, 1, 0.36, 1)`,
-                animation: visible ? `trace-pulse 4s ease-in-out 1.6s infinite` : 'none',
-                opacity: 0.55,
-              }
-        }
-      />
-    </svg>
+function shiftPath(d: string, dx: number): string {
+  return d.replace(/(-?\d+\.?\d*),(-?\d+\.?\d*)/g, (_, x, y) =>
+    `${parseFloat(x) + dx},${y}`
   );
 }
 
-/* ─── Spec strip ───────────────────────────────────────────────── */
+const TRACE_D = ONE_CYCLE + ' ' + shiftPath(ONE_CYCLE, 1440).replace('M1440,30', 'L1440,30');
+
+function ScrollingTrace() {
+  const shouldReduce = useReducedMotion();
+  return (
+    <div className="w-full overflow-hidden" style={{ height: 56 }} aria-hidden="true">
+      <svg
+        viewBox="0 0 2880 56"
+        preserveAspectRatio="none"
+        style={{
+          width: '200%',
+          height: '100%',
+          ...(shouldReduce
+            ? {}
+            : { animation: 'trace-scroll 10s linear infinite' }),
+        }}
+      >
+        <path
+          d={TRACE_D}
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="1.5"
+          className="text-primary"
+          opacity="0.45"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        />
+      </svg>
+    </div>
+  );
+}
+
+/* ─── Animated headline ────────────────────────────
+   Each word blurs in from below with stagger.
+──────────────────────────────────────────────────── */
+const EASE = [0.22, 1, 0.36, 1] as const;
+
+function AnimatedWord({ word, delay, last }: { word: string; delay: number; last?: boolean }) {
+  const shouldReduce = useReducedMotion();
+  return (
+    <motion.span
+      className="inline-block"
+      style={{ marginRight: last ? 0 : '0.28em' }}
+      initial={shouldReduce ? {} : { opacity: 0, y: 18, filter: 'blur(10px)' }}
+      animate={{ opacity: 1, y: 0, filter: 'blur(0px)' }}
+      transition={{ delay, duration: 0.55, ease: EASE }}
+    >
+      {word}
+    </motion.span>
+  );
+}
+
+function AnimatedHeadline() {
+  const line1 = ['Know', 'your', 'device.'];
+  const line2 = ['Trust', 'your', 'hardware.'];
+  const BASE = 0.25;
+  const STEP = 0.085;
+
+  return (
+    <h1
+      className="text-[clamp(2.8rem,6.5vw,5.2rem)] font-bold leading-[1.06] tracking-tight mb-6 text-foreground"
+      style={{ fontFamily: 'var(--font-display)' }}
+    >
+      <span className="block">
+        {line1.map((w, i) => (
+          <AnimatedWord key={i} word={w} delay={BASE + i * STEP} />
+        ))}
+      </span>
+      <span className="block relative">
+        {line2.map((w, i) => (
+          <AnimatedWord
+            key={i}
+            word={w}
+            delay={BASE + (line1.length + i) * STEP}
+            last={i === line2.length - 1}
+          />
+        ))}
+        {/* Underline draws after last word */}
+        <motion.span
+          className="absolute -bottom-1 left-0 h-[2.5px] rounded-full bg-primary block"
+          initial={{ width: 0 }}
+          animate={{ width: '100%' }}
+          transition={{ delay: BASE + (line1.length + line2.length) * STEP + 0.1, duration: 0.6, ease: EASE }}
+          aria-hidden="true"
+        />
+      </span>
+    </h1>
+  );
+}
+
+/* ─── Spec strip ────────────────────────────────── */
 const specs = [
   { label: 'LOCAL EXECUTION', value: '100%' },
   { label: 'PERMISSIONS', value: 'ON REQUEST' },
@@ -82,277 +136,53 @@ const specs = [
   { label: 'RESULTS', value: 'INSTANT' },
 ];
 
-/* ─── Test modules ─────────────────────────────────────────────── */
+/* ─── Test modules ──────────────────────────────── */
 const modules = [
-  {
-    id: 'keyboard', num: 'T-01', label: 'KEYBOARD', title: 'Keyboard',
-    icon: Keyboard,
-    desc: 'Live QWERTY visualizer tracks every key — including modifiers and the numpad.',
-    preview: <KeyboardPreview />,
-  },
-  {
-    id: 'mouse', num: 'T-02', label: 'MOUSE', title: 'Mouse & Trackpad',
-    icon: MousePointer2,
-    desc: 'Canvas trail plots movement, click detection, scroll delta, and button mapping.',
-    preview: <MousePreview />,
-  },
-  {
-    id: 'camera', num: 'T-03', label: 'CAMERA', title: 'Camera',
-    icon: Camera,
-    desc: 'Live preview with resolution readout and multi-source device switching.',
-    preview: <CameraPreview />,
-  },
-  {
-    id: 'microphone', num: 'T-04', label: 'MIC', title: 'Microphone',
-    icon: Mic,
-    desc: 'Web Audio waveform oscilloscope and peak-level meter, updated in real time.',
-    preview: <MicPreview />,
-  },
-  {
-    id: 'speaker', num: 'T-05', label: 'SPEAKER', title: 'Speaker & Audio',
-    icon: Volume2,
-    desc: 'Verify left channel, right channel, and stereo balance with generated tones.',
-    preview: <SpeakerPreview />,
-  },
-  {
-    id: 'display', num: 'T-06', label: 'DISPLAY', title: 'Display & Color',
-    icon: Monitor,
-    desc: 'Full-screen color patterns and sharpness grids to reveal dead or stuck pixels.',
-    preview: <DisplayPreview />,
-  },
-  {
-    id: 'battery', num: 'T-07', label: 'BATTERY', title: 'Battery',
-    icon: Battery,
-    desc: 'Live charge percentage, charging state, and estimated time remaining.',
-    preview: <BatteryPreview />,
-  },
-  {
-    id: 'network', num: 'T-08', label: 'NETWORK', title: 'Network',
-    icon: Wifi,
-    desc: 'Connection type, online status, and an in-browser download speed estimate.',
-    preview: <NetworkPreview />,
-  },
-  {
-    id: 'sensors', num: 'T-09', label: 'SENSORS', title: 'Sensors & Touch',
-    icon: Smartphone,
-    desc: 'Gyroscope, accelerometer axes, and a multi-touch canvas tracking every contact.',
-    preview: <SensorsPreview />,
-  },
+  { id: 'keyboard',   num: 'T-01', label: 'KEYBOARD', title: 'Keyboard',        icon: Keyboard,     desc: 'Live QWERTY visualizer tracks every key — including modifiers and the numpad.' },
+  { id: 'mouse',      num: 'T-02', label: 'MOUSE',    title: 'Mouse & Trackpad', icon: MousePointer2, desc: 'Canvas trail plots movement, clicks, scroll delta, and button mapping.' },
+  { id: 'camera',     num: 'T-03', label: 'CAMERA',   title: 'Camera',           icon: Camera,       desc: 'Live preview with resolution readout and multi-source device switching.' },
+  { id: 'microphone', num: 'T-04', label: 'MIC',      title: 'Microphone',       icon: Mic,          desc: 'Web Audio waveform oscilloscope and peak-level meter, updated in real time.' },
+  { id: 'speaker',    num: 'T-05', label: 'SPEAKER',  title: 'Speaker & Audio',  icon: Volume2,      desc: 'Verify left channel, right channel, and stereo balance with generated tones.' },
+  { id: 'display',    num: 'T-06', label: 'DISPLAY',  title: 'Display & Color',  icon: Monitor,      desc: 'Full-screen color patterns and sharpness grids to reveal dead or stuck pixels.' },
+  { id: 'battery',    num: 'T-07', label: 'BATTERY',  title: 'Battery',          icon: Battery,      desc: 'Live charge percentage, charging state, and estimated time remaining.' },
+  { id: 'network',    num: 'T-08', label: 'NETWORK',  title: 'Network',          icon: Wifi,         desc: 'Connection type, online status, and an in-browser download speed estimate.' },
+  { id: 'sensors',    num: 'T-09', label: 'SENSORS',  title: 'Sensors & Touch',  icon: Smartphone,   desc: 'Gyroscope, accelerometer axes, and a multi-touch canvas tracking every contact.' },
 ];
 
-/* ─── Inline hover preview components ─────────────────────────── */
-function KeyboardPreview() {
-  return (
-    <svg viewBox="0 0 56 36" className="w-14 h-9" aria-hidden="true">
-      {[
-        [4,4,10,10],[16,4,10,10],[28,4,10,10],[40,4,10,10],
-        [4,18,10,10],[16,18,22,10],[40,18,10,10],
-      ].map(([x,y,w,h], i) => (
-        <rect key={i} x={x} y={y} width={w} height={h} rx="1.5"
-          fill="currentColor" className="text-primary"
-          style={{ opacity: 0.15 + (i % 3) * 0.25,
-            animation: `trace-pulse ${1.2 + i*0.2}s ease-in-out infinite`,
-            animationDelay: `${i * 0.15}s` }} />
-      ))}
-    </svg>
-  );
-}
+/* ─── Privacy meter ─────────────────────────────── */
+const privacyItems = [
+  { label: 'DATA TRANSMITTED', value: '0 KB' },
+  { label: 'EXTERNAL CALLS',   value: '0' },
+  { label: 'ACCOUNTS REQUIRED', value: 'NONE' },
+  { label: 'STORAGE',           value: 'localStorage ONLY' },
+];
 
-function MousePreview() {
-  return (
-    <svg viewBox="0 0 56 56" className="w-14 h-14" aria-hidden="true">
-      <path d="M8,48 Q20,30 28,20 T44,8" fill="none" stroke="currentColor"
-        className="text-primary" strokeWidth="1.5" strokeLinecap="round"
-        style={{ strokeDasharray: 70, strokeDashoffset: 70,
-          animation: 'trace-draw 1s cubic-bezier(0.22,1,0.36,1) forwards infinite',
-          animationDelay: '0s' }} />
-      <circle cx="44" cy="8" r="3" fill="currentColor" className="text-primary" />
-    </svg>
-  );
-}
-
-function CameraPreview() {
-  return (
-    <svg viewBox="0 0 56 56" className="w-14 h-14" aria-hidden="true">
-      <circle cx="28" cy="28" r="18" fill="none" stroke="currentColor"
-        className="text-primary" strokeWidth="1" opacity="0.3" />
-      <circle cx="28" cy="28" r="10" fill="none" stroke="currentColor"
-        className="text-primary" strokeWidth="1" opacity="0.5" />
-      <circle cx="28" cy="28" r="4" fill="currentColor" className="text-primary" />
-      <line x1="10" y1="28" x2="46" y2="28" stroke="currentColor"
-        className="text-primary" strokeWidth="1" opacity="0.5"
-        style={{ animation: 'trace-pulse 1.5s ease-in-out infinite' }} />
-    </svg>
-  );
-}
-
-function MicPreview() {
-  const bars = [4, 8, 14, 10, 18, 12, 6, 16, 8, 12, 5, 14];
-  return (
-    <svg viewBox="0 0 56 36" className="w-14 h-9" aria-hidden="true">
-      {bars.map((h, i) => (
-        <rect key={i} x={i * 4 + 2} y={(36 - h) / 2} width="2.5" height={h} rx="1"
-          fill="currentColor" className="text-primary"
-          style={{ opacity: 0.4 + (i % 3) * 0.2,
-            animation: `trace-pulse ${0.8 + (i % 4) * 0.15}s ease-in-out infinite`,
-            animationDelay: `${i * 0.07}s` }} />
-      ))}
-    </svg>
-  );
-}
-
-function SpeakerPreview() {
-  return (
-    <svg viewBox="0 0 56 56" className="w-14 h-14" aria-hidden="true">
-      {[8, 14, 20].map((r, i) => (
-        <circle key={i} cx="28" cy="28" r={r} fill="none"
-          stroke="currentColor" className="text-primary"
-          strokeWidth="1.5"
-          style={{ opacity: 0.6 - i * 0.15,
-            animation: `led-pulse ${1 + i * 0.4}s ease-out infinite`,
-            animationDelay: `${i * 0.3}s` }} />
-      ))}
-      <circle cx="28" cy="28" r="4" fill="currentColor" className="text-primary" />
-    </svg>
-  );
-}
-
-function DisplayPreview() {
-  const colors = ['#FF4444', '#44BB66', '#4488FF', '#F5F5F5', '#111111'];
-  return (
-    <svg viewBox="0 0 56 36" className="w-14 h-9 rounded overflow-hidden" aria-hidden="true">
-      {colors.map((c, i) => (
-        <rect key={i} x={i * 11.2} y="0" width="11.2" height="36" fill={c}
-          style={{ opacity: 0.6 + (i === 2 ? 0.3 : 0) }} />
-      ))}
-    </svg>
-  );
-}
-
-function BatteryPreview() {
-  return (
-    <svg viewBox="0 0 56 36" className="w-14 h-9" aria-hidden="true">
-      <rect x="4" y="8" width="42" height="20" rx="3" fill="none"
-        stroke="currentColor" className="text-primary" strokeWidth="1.5" />
-      <rect x="46" y="14" width="4" height="8" rx="1" fill="currentColor"
-        className="text-primary" opacity="0.5" />
-      <rect x="6" y="10" width="0" height="16" rx="1.5" fill="currentColor"
-        className="text-primary" opacity="0.8"
-        style={{ animation: 'none',
-          width: '36px',
-          clipPath: 'inset(0)' }} />
-      <rect x="6" y="10" width="28" height="16" rx="1.5" fill="currentColor"
-        className="text-primary" opacity="0.8" />
-    </svg>
-  );
-}
-
-function NetworkPreview() {
-  return (
-    <svg viewBox="0 0 56 40" className="w-14 h-10" aria-hidden="true">
-      {[0,1,2,3].map((i) => (
-        <rect key={i}
-          x={8 + i * 12} y={32 - i * 8} width="8" height={8 + i * 8} rx="1"
-          fill="currentColor" className="text-primary"
-          style={{ opacity: 0.25 + i * 0.2,
-            animation: `trace-pulse ${0.8 + i * 0.2}s ease-in-out infinite`,
-            animationDelay: `${i * 0.15}s` }} />
-      ))}
-    </svg>
-  );
-}
-
-function SensorsPreview() {
-  return (
-    <svg viewBox="0 0 56 56" className="w-14 h-14" aria-hidden="true">
-      <circle cx="28" cy="28" r="20" fill="none" stroke="currentColor"
-        className="text-primary" strokeWidth="1" opacity="0.25" />
-      <line x1="28" y1="8" x2="28" y2="28" stroke="currentColor"
-        className="text-primary" strokeWidth="2" strokeLinecap="round"
-        style={{ transformOrigin: '28px 28px',
-          animation: 'spin 2s linear infinite' }} />
-      <circle cx="28" cy="28" r="3" fill="currentColor" className="text-primary" />
-    </svg>
-  );
-}
-
-/* ─── Privacy meter ─────────────────────────────────────────────── */
-function PrivacyMeter() {
-  const [tick, setTick] = useState(0);
-  useEffect(() => {
-    const id = setInterval(() => setTick(t => t + 1), 2000);
-    return () => clearInterval(id);
-  }, []);
-
-  const labels = [
-    { key: 'DATA TRANSMITTED', val: '0 KB' },
-    { key: 'REQUESTS MADE', val: '0' },
-    { key: 'EXTERNAL CALLS', val: '0' },
-    { key: 'STORAGE', val: 'localStorage ONLY' },
-  ];
-
-  return (
-    <div className="border-t border-border py-5 bg-background" aria-label="Privacy readout">
-      <div className="container mx-auto max-w-6xl px-6">
-        <div className="flex flex-wrap items-center gap-x-8 gap-y-3 justify-center">
-          {labels.map((item, i) => (
-            <div key={item.key} className="flex items-center gap-2">
-              <span className="font-mono text-[10px] tracking-[0.18em] text-muted-foreground uppercase">
-                {item.key}
-              </span>
-              <span className="font-mono text-[10px] tracking-widest text-primary font-medium uppercase">
-                {item.val}
-              </span>
-              {i < labels.length - 1 && (
-                <span className="hidden sm:block w-px h-3 bg-border ml-4" aria-hidden="true" />
-              )}
-            </div>
-          ))}
-        </div>
-      </div>
-    </div>
-  );
-}
-
-/* ─── Custom easing ─────────────────────────────────────────────── */
-const EASE = [0.22, 1, 0.36, 1] as const;
-
-/* ─── Page ──────────────────────────────────────────────────────── */
+/* ─── Page ──────────────────────────────────────── */
 export function LandingPage() {
   const { theme, setTheme } = useTheme();
   const shouldReduce = useReducedMotion();
-  const [traceVisible, setTraceVisible] = useState(false);
-
-  useEffect(() => {
-    const id = setTimeout(() => setTraceVisible(true), 80);
-    return () => clearTimeout(id);
-  }, []);
 
   const fadeUp = (delay: number) =>
     shouldReduce
-      ? { initial: {}, animate: {}, transition: {} }
+      ? {}
       : {
           initial: { opacity: 0, y: 14 },
           animate: { opacity: 1, y: 0 },
-          transition: { delay, duration: 0.55, ease: EASE },
+          transition: { delay, duration: 0.5, ease: EASE },
         };
 
   return (
     <div className="min-h-[100dvh] flex flex-col bg-background text-foreground font-sans antialiased selection:bg-primary/15 selection:text-primary">
 
-      {/* ── Nav ─────────────────────────────────── */}
+      {/* ── Nav ────────────────────────────────── */}
       <header className="sticky top-0 z-50 w-full border-b border-border bg-background/90 backdrop-blur-md">
         <div className="container mx-auto max-w-6xl px-6 h-[58px] flex items-center justify-between">
           <div className="flex items-center gap-2.5">
             <Activity className="w-5 h-5 text-primary" strokeWidth={2} />
-            <span
-              className="text-foreground font-semibold tracking-tight leading-none"
-              style={{ fontFamily: 'var(--font-display)' }}
-            >
+            <span className="text-foreground font-semibold tracking-tight leading-none" style={{ fontFamily: 'var(--font-display)' }}>
               CheckMyDevice
             </span>
           </div>
-
           <div className="flex items-center gap-3">
             <Button
               variant="ghost"
@@ -374,40 +204,20 @@ export function LandingPage() {
 
       <main className="flex-1">
         {/* ── Hero ─────────────────────────────── */}
-        <section className="relative overflow-hidden pt-32 pb-20 md:pt-44 md:pb-28">
-          {/* Signal trace — drawn first, persists as ambient element */}
-          <SignalTrace visible={traceVisible} />
-
-          <div className="container mx-auto max-w-4xl px-6 text-center relative z-10">
-            <motion.div {...fadeUp(0.2)}>
-              <h1
-                className="text-[clamp(2.6rem,6vw,5rem)] font-bold leading-[1.04] tracking-tight mb-6 text-foreground"
-                style={{ fontFamily: 'var(--font-display)' }}
-              >
-                Know your device.{' '}
-                <span className="relative inline-block">
-                  Trust your hardware.
-                  {/* Animated underline */}
-                  <motion.span
-                    className="absolute bottom-0.5 left-0 h-[2px] rounded-full bg-primary"
-                    initial={{ width: 0 }}
-                    animate={{ width: traceVisible ? '100%' : 0 }}
-                    transition={{ delay: 1.5, duration: 0.65, ease: EASE }}
-                    aria-hidden="true"
-                  />
-                </span>
-              </h1>
-            </motion.div>
+        <section className="relative overflow-hidden pt-28 pb-0 md:pt-40">
+          <div className="container mx-auto max-w-4xl px-6 text-center">
+            {/* Headline with word animation */}
+            <AnimatedHeadline />
 
             <motion.p
-              {...fadeUp(0.38)}
-              className="text-[1.05rem] md:text-lg text-muted-foreground max-w-xl mx-auto mb-10 leading-relaxed"
+              {...fadeUp(0.75)}
+              className="text-[1rem] md:text-[1.1rem] text-muted-foreground max-w-lg mx-auto mb-10 leading-relaxed"
             >
               Nine hardware tests. No accounts, no plugins, no data collection.
               Open the page, run the tests, trust the results.
             </motion.p>
 
-            <motion.div {...fadeUp(0.52)} className="flex flex-col sm:flex-row items-center justify-center gap-3">
+            <motion.div {...fadeUp(0.88)} className="flex flex-col sm:flex-row items-center justify-center gap-3 mb-14">
               <Button
                 asChild
                 size="lg"
@@ -420,24 +230,26 @@ export function LandingPage() {
               </Button>
               <Button
                 asChild
-                variant="outline"
                 size="lg"
-                className="gap-2 px-7 h-11 text-sm font-medium w-full sm:w-auto"
+                className="gap-2 px-7 h-11 text-sm font-medium w-full sm:w-auto bg-background border-2 border-border text-foreground hover:bg-secondary hover:border-primary/30 shadow-sm"
                 data-testid="landing-results-btn"
               >
                 <Link href="/results">View Results</Link>
               </Button>
             </motion.div>
           </div>
+
+          {/* Scrolling trace — sits BELOW the text as a visual divider */}
+          <ScrollingTrace />
         </section>
 
         {/* ── Spec strip ───────────────────────── */}
-        <div className="border-y border-border py-4 overflow-x-auto">
+        <div className="border-y border-border py-4 overflow-x-auto bg-card/30">
           <div className="container mx-auto max-w-6xl px-6">
             <div className="flex items-center justify-center md:justify-between gap-6 min-w-max md:min-w-0 mx-auto md:mx-0">
               {specs.map((spec, i) => (
                 <div key={spec.label} className="flex items-center gap-6">
-                  <div className="spec-item">
+                  <div className="font-mono text-[10px] tracking-[0.16em] text-muted-foreground uppercase">
                     {spec.label}
                     <span className="mx-2 text-primary" aria-hidden="true">—</span>
                     <span className="text-foreground font-medium">{spec.value}</span>
@@ -462,8 +274,8 @@ export function LandingPage() {
               >
                 Test modules
               </h2>
-              <p className="text-muted-foreground text-[0.95rem] max-w-lg">
-                Each module runs directly against native browser APIs — no plugins or extensions required.
+              <p className="text-muted-foreground text-[0.92rem] max-w-md">
+                Each module runs against native browser APIs — no plugins or extensions required.
               </p>
             </div>
 
@@ -476,60 +288,37 @@ export function LandingPage() {
                     initial={shouldReduce ? {} : { opacity: 0, y: 14 }}
                     whileInView={shouldReduce ? {} : { opacity: 1, y: 0 }}
                     viewport={{ once: true, margin: '-60px' }}
-                    transition={{ delay: (i % 3) * 0.08, duration: 0.45, ease: EASE }}
+                    transition={{ delay: (i % 3) * 0.07, duration: 0.45, ease: EASE }}
                   >
                     <Link href={`/test/${mod.id}`} data-testid={`landing-feature-${mod.id}`}>
                       <div
-                        className="group relative p-6 rounded-lg border border-border bg-card cursor-pointer overflow-hidden h-full flex flex-col gap-5 transition-all duration-200 hover:border-primary/50 hover:shadow-md"
-                        style={{
-                          transitionTimingFunction: 'cubic-bezier(0.22, 1, 0.36, 1)',
-                        }}
-                        onMouseEnter={(e) =>
-                          !shouldReduce &&
-                          (e.currentTarget.style.transform = 'translateY(-4px)')
-                        }
-                        onMouseLeave={(e) =>
-                          (e.currentTarget.style.transform = 'translateY(0)')
-                        }
+                        className="group relative p-5 rounded-lg border border-border bg-card cursor-pointer overflow-hidden flex flex-col gap-4 transition-all duration-200 hover:border-primary/50 hover:shadow-md"
+                        style={{ transitionTimingFunction: 'cubic-bezier(0.22, 1, 0.36, 1)' }}
+                        onMouseEnter={e => { if (!shouldReduce) e.currentTarget.style.transform = 'translateY(-4px)'; }}
+                        onMouseLeave={e => { e.currentTarget.style.transform = 'translateY(0)'; }}
                       >
-                        {/* Header row */}
+                        {/* Header: ID + icon */}
                         <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-2.5">
-                            {/* Status LED */}
-                            <span
-                              className="block w-2 h-2 rounded-full flex-shrink-0"
-                              style={{ background: 'var(--color-status-idle)' }}
-                              aria-hidden="true"
-                            />
-                            {/* Monospace ID */}
-                            <span
-                              className="font-mono text-[10px] tracking-[0.14em] text-muted-foreground select-none"
-                            >
+                          <div className="flex items-center gap-2">
+                            <span className="block w-1.5 h-1.5 rounded-full bg-muted-foreground/30 flex-shrink-0" aria-hidden="true" />
+                            <span className="font-mono text-[10px] tracking-[0.16em] text-muted-foreground select-none">
                               {mod.num} {mod.label}
                             </span>
                           </div>
-
-                          {/* Hover preview — slides in from right */}
-                          <div
-                            className="opacity-0 group-hover:opacity-100 transition-opacity duration-200 text-primary"
-                            aria-hidden="true"
-                          >
-                            {mod.preview}
+                          <div className="p-2 rounded-md bg-secondary text-muted-foreground group-hover:bg-primary group-hover:text-primary-foreground transition-all duration-200">
+                            <Icon className="w-4 h-4" strokeWidth={1.5} />
                           </div>
                         </div>
 
-                        {/* Content */}
-                        <div className="flex-1 flex flex-col gap-2">
-                          <div className="flex items-center gap-2">
-                            <Icon className="w-4 h-4 text-muted-foreground group-hover:text-primary transition-colors duration-200" strokeWidth={1.5} />
-                            <h3
-                              className="font-semibold text-foreground text-[0.95rem] group-hover:text-primary transition-colors duration-200"
-                              style={{ fontFamily: 'var(--font-display)' }}
-                            >
-                              {mod.title}
-                            </h3>
-                          </div>
-                          <p className="text-[0.82rem] text-muted-foreground leading-relaxed">
+                        {/* Title + desc */}
+                        <div>
+                          <h3
+                            className="font-semibold text-[0.95rem] text-foreground group-hover:text-primary transition-colors duration-200 mb-1"
+                            style={{ fontFamily: 'var(--font-display)' }}
+                          >
+                            {mod.title}
+                          </h3>
+                          <p className="text-[0.8rem] text-muted-foreground leading-relaxed">
                             {mod.desc}
                           </p>
                         </div>
@@ -540,7 +329,7 @@ export function LandingPage() {
               })}
             </div>
 
-            <div className="mt-14 flex justify-center">
+            <div className="mt-12 flex justify-center">
               <Button asChild size="lg" className="gap-2 px-8 h-11 text-sm font-semibold" data-testid="landing-cta-bottom">
                 <Link href="/dashboard">
                   Run all 9 tests <ArrowRight className="w-4 h-4" />
@@ -550,19 +339,30 @@ export function LandingPage() {
           </div>
         </section>
 
-        {/* ── Privacy meter ─────────────────── */}
-        <PrivacyMeter />
+        {/* ── Privacy meter ────────────────────── */}
+        <div className="border-t border-border py-5 bg-card/20" role="complementary" aria-label="Privacy status">
+          <div className="container mx-auto max-w-6xl px-6">
+            <div className="flex flex-wrap items-center gap-x-8 gap-y-3 justify-center">
+              {privacyItems.map((item, i) => (
+                <div key={item.label} className="flex items-center gap-3">
+                  <span className="font-mono text-[10px] tracking-[0.16em] text-muted-foreground uppercase">{item.label}</span>
+                  <span className="font-mono text-[10px] tracking-widest text-primary font-medium uppercase">{item.value}</span>
+                  {i < privacyItems.length - 1 && (
+                    <span className="hidden sm:block w-px h-3 bg-border ml-2" aria-hidden="true" />
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
       </main>
 
-      {/* ── Footer ──────────────────────────── */}
+      {/* ── Footer ──────────────────────────────── */}
       <footer className="border-t border-border py-8 bg-background">
         <div className="container mx-auto max-w-6xl px-6 flex flex-col sm:flex-row items-center justify-between gap-4">
           <div className="flex items-center gap-2">
             <Activity className="w-4 h-4 text-primary" strokeWidth={2} />
-            <span
-              className="text-sm font-semibold text-foreground tracking-tight"
-              style={{ fontFamily: 'var(--font-display)' }}
-            >
+            <span className="text-sm font-semibold text-foreground tracking-tight" style={{ fontFamily: 'var(--font-display)' }}>
               CheckMyDevice
             </span>
           </div>
