@@ -1,11 +1,11 @@
 import { useEffect, useRef, useState } from 'react';
-import { Link } from 'wouter';
 import { motion } from 'framer-motion';
-import { ArrowLeft, Volume2, Play, Square } from 'lucide-react';
+import { Volume2, Play, Square } from 'lucide-react';
 import { useTestContext } from '@/context/TestContext';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Slider } from '@/components/ui/slider';
+import { TestPageHeader } from '@/components/TestPageHeader';
 
 export function SpeakerTest() {
   const { results, setResult } = useTestContext();
@@ -122,30 +122,20 @@ export function SpeakerTest() {
   const handleMarkWorking = () => setResult('speaker', 'working');
 
   return (
-    <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="flex flex-col max-w-4xl mx-auto w-full">
-      <div className="flex items-center gap-4 pb-6 border-b border-border/50 mb-6">
-        <Button variant="ghost" size="icon" className="shrink-0 text-muted-foreground hover:text-foreground" asChild>
-          <Link href="/dashboard"><ArrowLeft className="w-5 h-5" /></Link>
-        </Button>
-        <div className="flex-1">
-          <h1 className="text-2xl font-bold tracking-tight">Speaker</h1>
-          <p className="text-sm text-muted-foreground mt-0.5 font-medium">Test stereo channels and audio output.</p>
-        </div>
-        <div className="flex gap-3">
-          <Button variant="outline" size="sm" className="text-amber-600 border-amber-600/20 hover:bg-amber-600/10 hover:text-amber-700 dark:text-amber-500 dark:hover:text-amber-400 font-semibold" onClick={handleMarkIssue}>
-            Mark Issue
-          </Button>
-          <Button variant="default" size="sm" className="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold" onClick={handleMarkWorking}>
-            Mark Working
-          </Button>
-        </div>
-      </div>
+    <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="flex flex-col max-w-4xl mx-auto w-full min-h-[calc(100dvh-12rem)] justify-center">
+      <TestPageHeader
+        testId="T-05"
+        title="Speaker"
+        description="Test stereo channels and audio output."
+        onMarkIssue={handleMarkIssue}
+        onMarkWorking={handleMarkWorking}
+      />
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <Card className="shadow-none border-border/60 bg-card">
           <CardContent className="p-10 flex flex-col items-center justify-center gap-10 min-h-[350px]">
-            <div className="w-28 h-28 bg-primary/10 rounded-full flex items-center justify-center text-primary relative">
-              <Volume2 className="w-14 h-14 relative z-10" />
+            <div className="w-16 h-16 bg-primary/20 rounded-full flex items-center justify-center text-primary relative">
+              <Volume2 className="w-8 h-8 relative z-10" />
               {playing && (
                 <span className="absolute flex h-full w-full">
                   <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-20 duration-1000"></span>

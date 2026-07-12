@@ -1,11 +1,10 @@
 import { useEffect, useState, useCallback } from 'react';
-import { Link } from 'wouter';
 import { motion } from 'framer-motion';
-import { ArrowLeft, CheckCircle2, AlertCircle } from 'lucide-react';
+import { CheckCircle2, AlertCircle } from 'lucide-react';
 import { useTestContext } from '@/context/TestContext';
-import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
+import { TestPageHeader } from '@/components/TestPageHeader';
 
 // Standard QWERTY layout
 const keyRows = [
@@ -72,23 +71,13 @@ export function KeyboardTest() {
 
   return (
     <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="flex flex-col max-w-4xl mx-auto w-full">
-      <div className="flex items-center gap-4 pb-6 border-b border-border/50 mb-6">
-        <Button variant="ghost" size="icon" className="shrink-0 text-muted-foreground hover:text-foreground" asChild>
-          <Link href="/dashboard"><ArrowLeft className="w-5 h-5" /></Link>
-        </Button>
-        <div className="flex-1">
-          <h1 className="text-2xl font-bold tracking-tight">Keyboard Tester</h1>
-          <p className="text-sm text-muted-foreground mt-0.5 font-medium">Press keys on your keyboard to test them.</p>
-        </div>
-        <div className="flex gap-3">
-          <Button variant="outline" size="sm" className="text-amber-600 border-amber-600/20 hover:bg-amber-600/10 hover:text-amber-700 dark:text-amber-500 dark:hover:text-amber-400 font-semibold" onClick={handleMarkIssue}>
-            Mark Issue
-          </Button>
-          <Button variant="default" size="sm" className="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold" onClick={handleMarkWorking}>
-            Mark Working
-          </Button>
-        </div>
-      </div>
+      <TestPageHeader
+        testId="T-01"
+        title="Keyboard"
+        description="Press keys on your keyboard to test them."
+        onMarkIssue={handleMarkIssue}
+        onMarkWorking={handleMarkWorking}
+      />
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <Card className="md:col-span-2 shadow-none border-border/60">
@@ -164,9 +153,9 @@ export function KeyboardTest() {
                <div className="flex justify-between items-center">
                  <span className="font-semibold text-sm uppercase tracking-wider text-muted-foreground">Status</span>
                  {results.keyboard === 'working' ? (
-                   <span className="text-sm font-bold text-emerald-500">Working</span>
+                    <span className="text-sm font-bold text-status-pass">Working</span>
                  ) : results.keyboard === 'issue' ? (
-                   <span className="text-sm font-bold text-amber-500">Issue</span>
+                    <span className="text-sm font-bold text-status-warn">Issue</span>
                  ) : (
                    <span className="text-sm font-bold text-muted-foreground">Untested</span>
                  )}

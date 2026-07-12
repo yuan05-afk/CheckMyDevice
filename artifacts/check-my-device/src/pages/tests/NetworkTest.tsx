@@ -1,11 +1,11 @@
 import { useEffect, useState } from 'react';
-import { Link } from 'wouter';
 import { motion } from 'framer-motion';
-import { ArrowLeft, Wifi, WifiOff, Globe, Download } from 'lucide-react';
+import { Wifi, WifiOff, Globe, Download } from 'lucide-react';
 import { useTestContext } from '@/context/TestContext';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
+import { TestPageHeader } from '@/components/TestPageHeader';
 
 export function NetworkTest() {
   const { results, setResult } = useTestContext();
@@ -107,30 +107,20 @@ export function NetworkTest() {
   const handleMarkWorking = () => setResult('network', 'working');
 
   return (
-    <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="flex flex-col max-w-4xl mx-auto w-full">
-      <div className="flex items-center gap-4 pb-6 border-b border-border/50 mb-6">
-        <Button variant="ghost" size="icon" className="shrink-0 text-muted-foreground hover:text-foreground" asChild>
-          <Link href="/dashboard"><ArrowLeft className="w-5 h-5" /></Link>
-        </Button>
-        <div className="flex-1">
-          <h1 className="text-2xl font-bold tracking-tight">Network</h1>
-          <p className="text-sm text-muted-foreground mt-0.5 font-medium">Test connectivity and approximate download speed.</p>
-        </div>
-        <div className="flex gap-3">
-          <Button variant="outline" size="sm" className="text-amber-600 border-amber-600/20 hover:bg-amber-600/10 hover:text-amber-700 dark:text-amber-500 dark:hover:text-amber-400 font-semibold" onClick={handleMarkIssue}>
-            Mark Issue
-          </Button>
-          <Button variant="default" size="sm" className="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold" onClick={handleMarkWorking}>
-            Mark Working
-          </Button>
-        </div>
-      </div>
+    <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="flex flex-col max-w-4xl mx-auto w-full min-h-[calc(100dvh-12rem)] justify-center">
+      <TestPageHeader
+        testId="T-08"
+        title="Network"
+        description="Test connectivity and approximate download speed."
+        onMarkIssue={handleMarkIssue}
+        onMarkWorking={handleMarkWorking}
+      />
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <Card className="flex flex-col h-full shadow-none border-border/60">
           <CardContent className="p-8 flex-1 flex flex-col items-center justify-center gap-8">
-            <div className={`w-28 h-28 rounded-full flex items-center justify-center transition-colors ${isOnline ? 'bg-emerald-500/15 text-emerald-500' : 'bg-amber-500/15 text-amber-500'}`}>
-              {isOnline ? <Wifi className="w-14 h-14" /> : <WifiOff className="w-14 h-14" />}
+            <div className={`w-16 h-16 rounded-full flex items-center justify-center transition-colors ${isOnline ? 'bg-status-pass/15 text-status-pass' : 'bg-status-warn/15 text-status-warn'}`}>
+              {isOnline ? <Wifi className="w-8 h-8" /> : <WifiOff className="w-8 h-8" />}
             </div>
             
             <div className="text-center">
@@ -212,7 +202,7 @@ export function NetworkTest() {
               
               {speedTest.status === 'error' && (
                 <div className="space-y-5 w-full text-center">
-                  <div className="text-amber-500 font-bold text-lg">Test failed</div>
+                  <div className="text-status-warn font-bold text-lg">Test failed</div>
                   <p className="text-sm font-medium text-muted-foreground">{speedTest.error}</p>
                   <Button onClick={runSpeedTest} variant="outline" className="font-bold">
                     Retry

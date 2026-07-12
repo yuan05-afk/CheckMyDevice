@@ -1,10 +1,10 @@
 import { useEffect, useRef, useState } from 'react';
-import { Link } from 'wouter';
 import { motion } from 'framer-motion';
-import { ArrowLeft, Mic as MicIcon, ShieldAlert } from 'lucide-react';
+import { Mic as MicIcon, ShieldAlert } from 'lucide-react';
 import { useTestContext } from '@/context/TestContext';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
+import { TestPageHeader } from '@/components/TestPageHeader';
 
 export function MicrophoneTest() {
   const { results, setResult } = useTestContext();
@@ -138,27 +138,18 @@ export function MicrophoneTest() {
 
   return (
     <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="flex flex-col max-w-4xl mx-auto w-full">
-      <div className="flex items-center gap-4 pb-6 border-b border-border/50 mb-6">
-        <Button variant="ghost" size="icon" className="shrink-0 text-muted-foreground hover:text-foreground" asChild>
-          <Link href="/dashboard"><ArrowLeft className="w-5 h-5" /></Link>
-        </Button>
-        <div className="flex-1">
-          <h1 className="text-2xl font-bold tracking-tight">Microphone</h1>
-          <p className="text-sm text-muted-foreground mt-0.5 font-medium">Test audio input and levels.</p>
-        </div>
-        <div className="flex gap-3">
-          <Button variant="outline" size="sm" className="text-amber-600 border-amber-600/20 hover:bg-amber-600/10 hover:text-amber-700 dark:text-amber-500 dark:hover:text-amber-400 font-semibold" onClick={handleMarkIssue}>
-            Mark Issue
-          </Button>
-          <Button variant="default" size="sm" className="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold" onClick={handleMarkWorking}>
-            Mark Working
-          </Button>
-        </div>
-      </div>
+      <TestPageHeader
+        testId="T-04"
+        title="Microphone"
+        description="Test audio input and levels."
+        onMarkIssue={handleMarkIssue}
+        onMarkWorking={handleMarkWorking}
+      />
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <Card className="md:col-span-2 shadow-none border-border/60">
           <CardContent className="p-6">
+            <p className="spec-item mb-3">Audio input</p>
             <div className="aspect-[21/9] bg-[#0D0D0D] rounded-xl overflow-hidden relative flex items-center justify-center border border-border/50 shadow-inner">
               {!stream && !error && (
                 <div className="text-center p-6 flex flex-col items-center gap-4 z-10 absolute inset-0 bg-[#0D0D0D]/90 backdrop-blur-sm justify-center">

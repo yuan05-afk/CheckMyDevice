@@ -1,10 +1,9 @@
 import { useState, useEffect } from 'react';
-import { Link } from 'wouter';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ArrowLeft, Maximize2, X, CheckCircle2, AlertTriangle } from 'lucide-react';
+import { Maximize2, X, CheckCircle2, AlertTriangle } from 'lucide-react';
 import { useTestContext } from '@/context/TestContext';
-import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
+import { TestPageHeader } from '@/components/TestPageHeader';
 
 const testPatterns = [
   { id: 'red', name: 'Red', bg: '#FF0000', textColor: '#ffffff' },
@@ -148,14 +147,14 @@ export function DisplayTest() {
                 style={{ backgroundColor: 'rgba(0,0,0,0.7)', color: '#fff', backdropFilter: 'blur(12px)' }}
                 onClick={() => { handleMarkWorking(); exitFullscreen(); }}
               >
-                <CheckCircle2 className="w-5 h-5 text-emerald-400" /> Looks good
+                <CheckCircle2 className="w-5 h-5 text-status-pass" /> Looks good
               </button>
               <button
                 className="flex items-center gap-2 px-5 py-3 rounded-full text-sm font-semibold border border-white/20 shadow-lg hover:scale-105 transition-transform"
                 style={{ backgroundColor: 'rgba(0,0,0,0.7)', color: '#fff', backdropFilter: 'blur(12px)' }}
                 onClick={() => { handleMarkIssue(); exitFullscreen(); }}
               >
-                <AlertTriangle className="w-5 h-5 text-amber-400" /> Issue found
+                <AlertTriangle className="w-5 h-5 text-status-warn" /> Issue found
               </button>
             </div>
           </motion.div>
@@ -163,23 +162,13 @@ export function DisplayTest() {
       </AnimatePresence>
 
       <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="flex flex-col max-w-4xl mx-auto w-full">
-        <div className="flex items-center gap-4 pb-6 border-b border-border/50 mb-6">
-          <Button variant="ghost" size="icon" className="shrink-0 text-muted-foreground hover:text-foreground" asChild>
-            <Link href="/dashboard"><ArrowLeft className="w-5 h-5" /></Link>
-          </Button>
-          <div className="flex-1">
-            <h1 className="text-2xl font-bold tracking-tight">Display & Color</h1>
-            <p className="text-sm text-muted-foreground mt-0.5 font-medium">Check for dead pixels, color accuracy, and sharpness.</p>
-          </div>
-          <div className="flex gap-3">
-            <Button variant="outline" size="sm" className="text-amber-600 border-amber-600/20 hover:bg-amber-600/10 hover:text-amber-700 dark:text-amber-500 dark:hover:text-amber-400 font-semibold" onClick={handleMarkIssue}>
-              Mark Issue
-            </Button>
-            <Button variant="default" size="sm" className="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold" onClick={handleMarkWorking}>
-              Mark Working
-            </Button>
-          </div>
-        </div>
+        <TestPageHeader
+          testId="T-06"
+          title="Display"
+          description="Check for dead pixels, color accuracy, and sharpness."
+          onMarkIssue={handleMarkIssue}
+          onMarkWorking={handleMarkWorking}
+        />
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           <Card className="md:col-span-2 shadow-none border-border/60">
@@ -231,8 +220,8 @@ export function DisplayTest() {
               <CardContent className="p-6 flex flex-col gap-3">
                 <h3 className="font-semibold text-sm uppercase tracking-wider text-muted-foreground">Result</h3>
                 <div className="text-sm">
-                  {results.display === 'working' && <span className="text-emerald-600 dark:text-emerald-400 font-bold bg-emerald-500/10 px-3 py-1.5 rounded-md">Marked as working</span>}
-                  {results.display === 'issue' && <span className="text-amber-600 dark:text-amber-500 font-bold bg-amber-500/10 px-3 py-1.5 rounded-md">Issue recorded</span>}
+                  {results.display === 'working' && <span className="text-status-pass font-bold bg-status-pass/10 px-3 py-1.5 rounded-md">Marked as working</span>}
+                  {results.display === 'issue' && <span className="text-status-warn font-bold bg-status-warn/10 px-3 py-1.5 rounded-md">Issue recorded</span>}
                   {results.display === 'untested' && <span className="text-muted-foreground font-semibold bg-secondary px-3 py-1.5 rounded-md">Not yet tested</span>}
                 </div>
               </CardContent>

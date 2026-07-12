@@ -26,20 +26,20 @@ Use pnpm only. The root `preinstall` rejects npm and Yarn and removes their lock
 pnpm install --frozen-lockfile
 ```
 
-`artifacts/check-my-device/vite.config.ts` throws unless both `PORT` and `BASE_PATH` are set. They are required by `dev`, `build`, and `serve`. POSIX shells:
+`artifacts/check-my-device/vite.config.ts` defaults to port `5173` and base path `/`. Set `PORT` or `BASE_PATH` only when you need to override those defaults. POSIX shells:
 
 ```sh
-PORT=5173 BASE_PATH=/ pnpm --filter @workspace/check-my-device run dev
-PORT=5173 BASE_PATH=/ pnpm --filter @workspace/check-my-device run build
-PORT=5173 BASE_PATH=/ pnpm --filter @workspace/check-my-device run serve
+pnpm --filter @workspace/check-my-device run dev
+pnpm --filter @workspace/check-my-device run build
+pnpm --filter @workspace/check-my-device run serve
 ```
 
 PowerShell:
 
 ```powershell
-$env:PORT='5173'; $env:BASE_PATH='/'; pnpm --filter @workspace/check-my-device run dev
-$env:PORT='5173'; $env:BASE_PATH='/'; pnpm --filter @workspace/check-my-device run build
-$env:PORT='5173'; $env:BASE_PATH='/'; pnpm --filter @workspace/check-my-device run serve
+pnpm --filter @workspace/check-my-device run dev
+pnpm --filter @workspace/check-my-device run build
+pnpm --filter @workspace/check-my-device run serve
 ```
 
 Production output is `artifacts/check-my-device/dist/public/`.
@@ -48,13 +48,13 @@ Production output is `artifacts/check-my-device/dist/public/`.
 
 ```sh
 pnpm run typecheck
-PORT=5173 BASE_PATH=/ pnpm run build
+pnpm run build
 pnpm run typecheck:libs
 ```
 
 | Package | Scripts |
 | --- | --- |
-| `@workspace/check-my-device` | `dev`, `build`, `serve`, `typecheck` (first three require `PORT` and `BASE_PATH`) |
+| `@workspace/check-my-device` | `dev`, `build`, `serve`, `typecheck` (the first three default to port `5173` and base path `/`) |
 | `@workspace/api-server` | `dev`, `build`, `start`, `typecheck` (scaffold; `dev` uses POSIX `export`) |
 | `@workspace/mockup-sandbox` | `dev`, `build`, `preview`, `typecheck` (scaffold) |
 | `@workspace/api-spec` | `codegen` |

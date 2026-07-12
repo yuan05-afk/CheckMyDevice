@@ -1,10 +1,9 @@
 import { useEffect, useState } from 'react';
-import { Link } from 'wouter';
 import { motion } from 'framer-motion';
-import { ArrowLeft, Battery as BatteryIcon, BatteryCharging, BatteryWarning, Zap } from 'lucide-react';
+import { Battery as BatteryIcon, BatteryCharging, BatteryWarning, Zap } from 'lucide-react';
 import { useTestContext } from '@/context/TestContext';
-import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
+import { TestPageHeader } from '@/components/TestPageHeader';
 
 export function BatteryTest() {
   const { results, setResult } = useTestContext();
@@ -65,35 +64,22 @@ export function BatteryTest() {
   };
 
   return (
-    <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="flex flex-col max-w-4xl mx-auto w-full">
-      <div className="flex items-center gap-4 pb-6 border-b border-border/50 mb-6">
-        <Button variant="ghost" size="icon" className="shrink-0 text-muted-foreground hover:text-foreground" asChild>
-          <Link href="/dashboard"><ArrowLeft className="w-5 h-5" /></Link>
-        </Button>
-        <div className="flex-1">
-          <h1 className="text-2xl font-bold tracking-tight">Battery</h1>
-          <p className="text-sm text-muted-foreground mt-0.5 font-medium">Check battery health, level, and charging status.</p>
-        </div>
-        <div className="flex gap-3">
-          {supported !== false && (
-            <>
-              <Button variant="outline" size="sm" className="text-amber-600 border-amber-600/20 hover:bg-amber-600/10 hover:text-amber-700 dark:text-amber-500 dark:hover:text-amber-400 font-semibold" onClick={() => setResult('battery', 'issue')}>
-                Mark Issue
-              </Button>
-              <Button variant="default" size="sm" className="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold" onClick={() => setResult('battery', 'working')}>
-                Mark Working
-              </Button>
-            </>
-          )}
-        </div>
-      </div>
+    <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="flex flex-col max-w-4xl mx-auto w-full min-h-[calc(100dvh-12rem)] justify-center">
+      <TestPageHeader
+        testId="T-07"
+        title="Battery"
+        description="Check battery health, level, and charging status."
+        onMarkIssue={() => setResult('battery', 'issue')}
+        onMarkWorking={() => setResult('battery', 'working')}
+        showActions={supported !== false}
+      />
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <Card className="flex flex-col justify-center shadow-none border-border/60 bg-card">
           <CardContent className="p-10 flex flex-col items-center justify-center gap-8">
             {supported === false ? (
               <div className="text-center flex flex-col items-center gap-4 py-8">
-                <div className="w-16 h-16 bg-secondary rounded-full flex items-center justify-center text-muted-foreground">
+                <div className="w-16 h-16 bg-primary/20 rounded-full flex items-center justify-center text-primary">
                   <BatteryWarning className="w-8 h-8" />
                 </div>
                 <div>
@@ -105,23 +91,26 @@ export function BatteryTest() {
               </div>
             ) : batteryState ? (
               <>
-                <div className="relative">
-                  <div className="w-36 h-72 border-8 border-foreground rounded-[2rem] p-2.5 relative flex flex-col justify-end overflow-hidden shadow-inner bg-background">
-                    <div className="absolute -top-4 left-1/2 -translate-x-1/2 w-14 h-5 bg-foreground rounded-t-xl" />
-                    
-                    <div 
-                      className={`w-full rounded-[1.2rem] transition-all duration-1000 ease-out flex items-center justify-center relative overflow-hidden ${
-                        batteryState.charging ? 'bg-emerald-500 shadow-[0_0_20px_rgba(16,185,129,0.4)]' : 
-                        batteryState.level > 0.2 ? 'bg-primary shadow-[0_0_20px_rgba(79,70,229,0.4)]' : 'bg-destructive'
-                      }`}
-                      style={{ height: `${Math.max(5, batteryState.level * 100)}%` }}
-                    >
-                      {batteryState.charging && (
-                        <Zap className="w-14 h-14 text-white/60 absolute animate-pulse drop-shadow-md" />
-                      )}
+                  <div className="w-64">
+                    <div className="relative h-40 rounded-t-xl border-[6px] border-foreground bg-background p-4 shadow-inner">
+                      <span className="absolute top-2 left-1/2 h-1 w-12 -translate-x-1/2 rounded-full bg-foreground/20" aria-hidden="true" />
+                      <div className="flex h-full items-end overflow-hidden rounded-md border border-border bg-secondary/60 p-2">
+                        <div
+                          className={`h-full rounded-sm transition-all duration-1000 ease-out flex items-center justify-center relative overflow-hidden ${
+                            batteryState.charging ? 'bg-status-pass' :
+                            batteryState.level > 0.2 ? 'bg-primary' : 'bg-status-warn'
+                          }`}
+                          style={{ width: `${Math.max(5, batteryState.level * 100)}%` }}
+                        >
+                          {batteryState.charging && (
+                            <Zap className="w-7 h-7 text-white/80 absolute animate-pulse" />
+                          )}
+                        </div>
+                      </div>
                     </div>
+                    <div className="mx-auto h-3 w-[18rem] rounded-b-xl bg-foreground/90" aria-hidden="true" />
+                    <div className="mx-auto h-1 w-16 rounded-b bg-foreground/40" aria-hidden="true" />
                   </div>
-                </div>
 
                 <div className="text-center">
                   <div className="text-6xl font-black tracking-tight mb-2 font-mono">
@@ -129,7 +118,7 @@ export function BatteryTest() {
                   </div>
                   <div className="flex items-center justify-center gap-2 text-muted-foreground font-semibold">
                     {batteryState.charging ? (
-                      <><BatteryCharging className="w-5 h-5 text-emerald-500" /> Plugged In</>
+                      <><BatteryCharging className="w-5 h-5 text-status-pass" /> Plugged In</>
                     ) : (
                       <><BatteryIcon className="w-5 h-5" /> On Battery</>
                     )}
@@ -138,8 +127,8 @@ export function BatteryTest() {
               </>
             ) : (
               <div className="animate-pulse flex flex-col items-center gap-4 py-16">
-                <div className="w-36 h-72 bg-secondary rounded-[2rem]" />
-                <div className="h-12 w-32 bg-secondary rounded-xl" />
+                <div className="h-40 w-64 rounded-t-xl bg-secondary" />
+                <div className="h-3 w-72 rounded-b-xl bg-secondary" />
               </div>
             )}
           </CardContent>
