@@ -191,8 +191,15 @@ function SectionIntro({
   id: string;
   icon: LucideIcon;
 }) {
+  const shouldReduce = useReducedMotion();
   return (
-    <div className="section-intro max-w-2xl mx-auto text-center mb-12 md:mb-14">
+    <motion.div
+      className="section-intro max-w-2xl mx-auto text-center mb-8 md:mb-10"
+      initial={shouldReduce ? undefined : { opacity: 0, y: 40, filter: 'blur(10px)' }}
+      whileInView={shouldReduce ? undefined : { opacity: 1, y: 0, filter: 'blur(0px)' }}
+      viewport={{ once: false, amount: 0.3 }}
+      transition={{ duration: 0.75, ease: EASE }}
+    >
       <div className="section-intro-badge">
         <Icon className="w-3.5 h-3.5" strokeWidth={1.8} />
         <span>{eyebrow}</span>
@@ -207,7 +214,7 @@ function SectionIntro({
       <p className="text-[0.92rem] md:text-base text-muted-foreground leading-relaxed">
         {description}
       </p>
-    </div>
+    </motion.div>
   );
 }
 
@@ -230,18 +237,18 @@ function ScrollChapter({
   });
   const opacity = useTransform(
     scrollYProgress,
-    [0, 0.12, 0.88, 1],
-    [0, 1, 1, 0],
+    [0, 0.06, 0.94, 1],
+    [0.3, 1, 1, 0.3],
   );
   const y = useTransform(
     scrollYProgress,
-    [0, 0.15, 0.85, 1],
-    ['12vh', '0vh', '0vh', '-12vh'],
+    [0, 0.2, 0.8, 1],
+    [56, 0, 0, -40],
   );
   const scale = useTransform(
     scrollYProgress,
-    [0, 0.14, 0.86, 1],
-    [0.975, 1, 1, 0.975],
+    [0, 0.18, 0.82, 1],
+    [0.97, 1, 1, 0.97],
   );
 
   return (
@@ -340,9 +347,10 @@ export function LandingPage() {
 
     const lenis = new Lenis({
       autoRaf: true,
-      duration: 1.15,
+      duration: 1.6,
       smoothWheel: true,
-      touchMultiplier: 1.05,
+      wheelMultiplier: 0.85,
+      touchMultiplier: 1.2,
     });
 
     return () => lenis.destroy();
@@ -390,7 +398,7 @@ export function LandingPage() {
 
       <main className="flex-1">
         {/* ── Hero ─────────────────────────────── */}
-        <ScrollChapter className="relative overflow-hidden pt-24 pb-0 md:pt-32" label="CheckMyDevice introduction">
+        <ScrollChapter className="relative overflow-hidden min-h-[calc(100dvh-58px)] pt-24 pb-0 md:pt-32" label="CheckMyDevice introduction">
           <div className="container mx-auto max-w-4xl px-6 text-center">
             {/* Headline with word animation */}
             <AnimatedHeadline />
@@ -424,7 +432,7 @@ export function LandingPage() {
         </ScrollChapter>
 
         {/* ── Test modules ─────────────────────── */}
-        <ScrollChapter className="py-20 md:py-24" labelledBy="modules-heading">
+        <ScrollChapter className="py-10 md:py-14" labelledBy="modules-heading">
           <div className="container mx-auto max-w-6xl px-6">
             <SectionIntro
               eyebrow="Test modules"
@@ -440,10 +448,10 @@ export function LandingPage() {
                 return (
                   <motion.div
                     key={mod.id}
-                    initial={shouldReduce ? {} : { opacity: 0, y: 14 }}
-                    whileInView={shouldReduce ? {} : { opacity: 1, y: 0 }}
-                    viewport={{ once: false, amount: 0.18 }}
-                    transition={{ delay: (i % 3) * 0.07, duration: 0.45, ease: EASE }}
+                    initial={shouldReduce ? {} : { opacity: 0, y: 50, filter: 'blur(6px)' }}
+                    whileInView={shouldReduce ? {} : { opacity: 1, y: 0, filter: 'blur(0px)' }}
+                    viewport={{ once: false, amount: 0.1 }}
+                    transition={{ delay: (i % 3) * 0.12, duration: 0.6, ease: EASE }}
                   >
                     <Link href={`/test/${mod.id}`} data-testid={`landing-feature-${mod.id}`}>
                       <div
@@ -484,7 +492,7 @@ export function LandingPage() {
               })}
             </div>
 
-            <div className="mt-12 flex justify-center">
+            <div className="mt-8 flex justify-center">
               <Button asChild size="lg" className="gap-2 px-8 h-11 text-sm font-semibold" data-testid="landing-cta-bottom">
                 <Link href="/dashboard">
                   Run all 9 tests <ArrowRight className="w-4 h-4" />
@@ -495,7 +503,7 @@ export function LandingPage() {
         </ScrollChapter>
 
         {/* ── Trust signals ─────────────────────── */}
-        <ScrollChapter className="py-20 md:py-24 bg-card/30" labelledBy="trust-signals-heading">
+        <ScrollChapter className="py-10 md:py-14 bg-card/30" labelledBy="trust-signals-heading">
           <div className="container mx-auto max-w-6xl px-6">
             <SectionIntro
               eyebrow="Local by design"
@@ -513,12 +521,12 @@ export function LandingPage() {
                     key={signal.label}
                     tabIndex={0}
                     className="trust-card group relative min-h-56 overflow-hidden rounded-xl border border-border bg-card p-5 outline-none"
-                    initial={shouldReduce ? {} : { opacity: 0, y: 12 }}
-                    whileInView={shouldReduce ? {} : { opacity: 1, y: 0 }}
+                    initial={shouldReduce ? {} : { opacity: 0, y: 50, scale: 0.94 }}
+                    whileInView={shouldReduce ? {} : { opacity: 1, y: 0, scale: 1 }}
                     whileHover={shouldReduce ? {} : { y: -6 }}
                     whileFocus={shouldReduce ? {} : { y: -6 }}
-                    viewport={{ once: false, amount: 0.22 }}
-                    transition={{ delay: index * 0.06, duration: 0.4, ease: EASE }}
+                    viewport={{ once: false, amount: 0.15 }}
+                    transition={{ delay: index * 0.1, duration: 0.6, ease: EASE }}
                   >
                     <span className="trust-card-scan" aria-hidden="true" />
                     <div className="relative z-10 flex items-start justify-between mb-8">
@@ -552,7 +560,7 @@ export function LandingPage() {
         </ScrollChapter>
 
         {/* ── Privacy receipt ──────────────────── */}
-        <ScrollChapter className="py-20 md:py-24 bg-card/20" labelledBy="privacy-heading">
+        <ScrollChapter className="py-10 md:py-14 bg-card/20" labelledBy="privacy-heading">
           <div className="container mx-auto max-w-6xl px-6">
             <SectionIntro
               eyebrow="Privacy, itemized"
@@ -596,12 +604,12 @@ export function LandingPage() {
                       key={item.label}
                       tabIndex={0}
                       className="privacy-item group relative p-6 outline-none"
-                      initial={shouldReduce ? {} : { opacity: 0, y: 18 }}
+                      initial={shouldReduce ? {} : { opacity: 0, y: 40 }}
                       whileInView={shouldReduce ? {} : { opacity: 1, y: 0 }}
                       whileHover={shouldReduce ? {} : { backgroundColor: 'hsl(var(--primary) / 0.045)' }}
                       whileFocus={shouldReduce ? {} : { backgroundColor: 'hsl(var(--primary) / 0.045)' }}
-                      viewport={{ once: false, amount: 0.22 }}
-                      transition={{ delay: index * 0.05, duration: 0.35, ease: EASE }}
+                      viewport={{ once: false, amount: 0.15 }}
+                      transition={{ delay: index * 0.08, duration: 0.55, ease: EASE }}
                     >
                       <div className="flex items-center justify-between mb-6">
                         <Icon className="w-5 h-5 text-muted-foreground group-hover:text-primary group-focus:text-primary group-hover:-translate-y-0.5 transition-all" strokeWidth={1.6} />

@@ -274,9 +274,8 @@
 
 .landing-chapter {
   display: flex;
-  min-height: calc(100svh - 58px);
   align-items: center;
-  overflow: clip;
+  position: relative;
 }
 
 .diagnostic-typewriter::after {
