@@ -16,6 +16,16 @@ import {
   Sun,
   Moon,
   ArrowRight,
+  Laptop,
+  ShieldCheck,
+  Database,
+  Zap,
+  Upload,
+  WifiOff,
+  UserX,
+  HardDrive,
+  LockKeyhole,
+  type LucideIcon,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
@@ -76,98 +86,156 @@ function ScrollingTrace() {
   );
 }
 
-/* ─── Animated headline ────────────────────────────
-   Each word blurs in from below with stagger.
-──────────────────────────────────────────────────── */
 const EASE = [0.22, 1, 0.36, 1] as const;
 
-function AnimatedWord({ word, delay, last }: { word: string; delay: number; last?: boolean }) {
-  const shouldReduce = useReducedMotion();
-  return (
-    <motion.span
-      className="inline-block"
-      style={{ marginRight: last ? 0 : '0.28em' }}
-      initial={shouldReduce ? {} : { opacity: 0, y: 18, filter: 'blur(10px)' }}
-      animate={{ opacity: 1, y: 0, filter: 'blur(0px)' }}
-      transition={{ delay, duration: 0.55, ease: EASE }}
-    >
-      {word}
-    </motion.span>
-  );
-}
-
 function AnimatedHeadline() {
-  const line1 = ['Know', 'your', 'device.'];
-  const line2 = ['Trust', 'your', 'hardware.'];
-  const BASE = 0.25;
-  const STEP = 0.085;
+  const shouldReduce = useReducedMotion();
+  const lineReveal = shouldReduce
+    ? {}
+    : {
+        initial: { opacity: 0, y: 24, filter: 'blur(12px)' },
+        animate: { opacity: 1, y: 0, filter: 'blur(0px)' },
+      };
 
   return (
     <h1
       className="text-[clamp(2.8rem,6.5vw,5.2rem)] font-bold leading-[1.06] tracking-tight mb-6 text-foreground"
       style={{ fontFamily: 'var(--font-display)' }}
     >
-      <span className="block">
-        {line1.map((w, i) => (
-          <AnimatedWord key={i} word={w} delay={BASE + i * STEP} />
-        ))}
-      </span>
-      <span className="block hero-gradient-text">
-        {line2.map((w, i) => (
-          <AnimatedWord
-            key={i}
-            word={w}
-            delay={BASE + (line1.length + i) * STEP}
-            last={i === line2.length - 1}
-          />
-        ))}
-      </span>
+      <motion.span
+        className="block"
+        {...lineReveal}
+        transition={{ delay: 0.16, duration: 0.7, ease: EASE }}
+      >
+        Know your device.
+      </motion.span>
+      <motion.span
+        className="block hero-gradient-text"
+        {...lineReveal}
+        transition={{ delay: 0.3, duration: 0.75, ease: EASE }}
+      >
+        Trust your hardware.
+      </motion.span>
     </h1>
   );
 }
 
-function AnimatedDescription() {
+const TYPEWRITER_COPY =
+  'Nine hardware tests. No accounts, no plugins, no data collection. Open the page, run the tests, trust the results.';
+
+function DiagnosticTypewriter() {
   const shouldReduce = useReducedMotion();
-  const phrases = [
-    'Nine hardware tests.',
-    'No accounts,',
-    'no plugins,',
-    'no data collection.',
-    'Open the page,',
-    'run the tests,',
-  ];
+  const [typedText, setTypedText] = useState('');
+  const [typingPhase, setTypingPhase] = useState<'typing' | 'holding' | 'deleting'>('typing');
+
+  useEffect(() => {
+    if (shouldReduce) {
+      setTypedText(TYPEWRITER_COPY);
+      return;
+    }
+
+    let timeout: ReturnType<typeof setTimeout>;
+
+    if (typingPhase === 'typing') {
+      if (typedText.length < TYPEWRITER_COPY.length) {
+        timeout = setTimeout(
+          () => setTypedText(TYPEWRITER_COPY.slice(0, typedText.length + 1)),
+          24,
+        );
+      } else {
+        timeout = setTimeout(() => setTypingPhase('holding'), 2200);
+      }
+    } else if (typingPhase === 'holding') {
+      timeout = setTimeout(() => setTypingPhase('deleting'), 900);
+    } else if (typedText.length > 0) {
+      timeout = setTimeout(() => setTypedText(typedText.slice(0, -1)), 9);
+    } else {
+      timeout = setTimeout(() => setTypingPhase('typing'), 550);
+    }
+
+    return () => clearTimeout(timeout);
+  }, [shouldReduce, typedText, typingPhase]);
 
   return (
-    <p className="text-[1rem] md:text-[1.1rem] text-muted-foreground max-w-xl mx-auto mb-10 leading-relaxed">
-      {phrases.map((phrase, index) => (
-        <motion.span
-          key={phrase}
-          className="inline-block mr-[0.28em]"
-          initial={shouldReduce ? {} : { opacity: 0, y: 10 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.72 + index * 0.07, duration: 0.45, ease: EASE }}
-        >
-          {phrase}
-        </motion.span>
-      ))}
-      <motion.span
-        className="hero-copy-accent inline-block"
-        initial={shouldReduce ? {} : { opacity: 0, y: 10 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 1.14, duration: 0.5, ease: EASE }}
+    <div
+      className="diagnostic-typewriter max-w-2xl mx-auto mb-10 text-left"
+      aria-label={TYPEWRITER_COPY}
+    >
+      <div className="flex items-center gap-2 mb-2" aria-hidden="true">
+        <span className="signal-status-dot" />
+        <span className="font-mono text-[9px] tracking-[0.18em] text-primary uppercase">
+          Local diagnostic message
+        </span>
+      </div>
+      <p className="font-mono text-[0.8rem] md:text-[0.88rem] text-muted-foreground leading-relaxed min-h-[4.8em] md:min-h-[3.2em]" aria-hidden="true">
+        <span className="text-primary mr-2">&gt;</span>
+        {typedText}
+        <span className="typing-cursor" />
+      </p>
+    </div>
+  );
+}
+
+function SectionIntro({
+  eyebrow,
+  title,
+  description,
+  id,
+  icon: Icon,
+}: {
+  eyebrow: string;
+  title: string;
+  description: string;
+  id: string;
+  icon: LucideIcon;
+}) {
+  return (
+    <div className="section-intro max-w-2xl mx-auto text-center mb-12 md:mb-14">
+      <div className="section-intro-badge">
+        <Icon className="w-3.5 h-3.5" strokeWidth={1.8} />
+        <span>{eyebrow}</span>
+      </div>
+      <h2
+        id={id}
+        className="text-3xl md:text-[2.6rem] font-bold tracking-tight leading-[1.1] mb-4"
+        style={{ fontFamily: 'var(--font-display)' }}
       >
-        trust the results.
-      </motion.span>
-    </p>
+        {title}
+      </h2>
+      <p className="text-[0.92rem] md:text-base text-muted-foreground leading-relaxed">
+        {description}
+      </p>
+      <span className="section-intro-rule" aria-hidden="true" />
+    </div>
   );
 }
 
 /* ─── Spec strip ────────────────────────────────── */
-const specs = [
-  { label: 'LOCAL EXECUTION', value: '100%' },
-  { label: 'PERMISSIONS', value: 'ON REQUEST' },
-  { label: 'DATA COLLECTED', value: '0 BYTES' },
-  { label: 'RESULTS', value: 'INSTANT' },
+const trustSignals = [
+  {
+    label: 'LOCAL EXECUTION',
+    value: '100%',
+    icon: Laptop,
+    description: 'Every diagnostic runs inside this browser tab on your device.',
+  },
+  {
+    label: 'PERMISSIONS',
+    value: 'ON REQUEST',
+    icon: ShieldCheck,
+    description: 'Camera and microphone access starts only after you approve the browser prompt.',
+  },
+  {
+    label: 'DATA COLLECTED',
+    value: '0 BYTES',
+    icon: Database,
+    description: 'No hardware profile, recording, image, or diagnostic report is collected.',
+  },
+  {
+    label: 'RESULTS',
+    value: 'INSTANT',
+    icon: Zap,
+    description: 'Results appear as your browser reports them, with no upload or processing queue.',
+  },
 ];
 
 /* ─── Test modules ──────────────────────────────── */
@@ -185,10 +253,30 @@ const modules = [
 
 /* ─── Privacy meter ─────────────────────────────── */
 const privacyItems = [
-  { label: 'DATA TRANSMITTED', value: '0 KB' },
-  { label: 'EXTERNAL CALLS',   value: '0' },
-  { label: 'ACCOUNTS REQUIRED', value: 'NONE' },
-  { label: 'STORAGE',           value: 'localStorage ONLY' },
+  {
+    label: 'DATA TRANSMITTED',
+    value: '0 KB',
+    icon: Upload,
+    description: 'Test results, camera frames, and microphone audio never leave this browser.',
+  },
+  {
+    label: 'EXTERNAL CALLS',
+    value: '0',
+    icon: WifiOff,
+    description: 'Diagnostics do not call a CheckMyDevice API or remote analysis service.',
+  },
+  {
+    label: 'ACCOUNTS REQUIRED',
+    value: 'NONE',
+    icon: UserX,
+    description: 'No sign-up, email address, identity, or tracking profile is required.',
+  },
+  {
+    label: 'STORAGE',
+    value: 'localStorage ONLY',
+    icon: HardDrive,
+    description: 'Only your test statuses are saved, locally in this browser, until you clear them.',
+  },
 ];
 
 /* ─── Page ──────────────────────────────────────── */
@@ -243,7 +331,7 @@ export function LandingPage() {
             {/* Headline with word animation */}
             <AnimatedHeadline />
 
-            <AnimatedDescription />
+            <DiagnosticTypewriter />
 
             <motion.div {...fadeUp(0.88)} className="flex flex-col sm:flex-row items-center justify-center gap-3 mb-14">
               <Button
@@ -271,41 +359,16 @@ export function LandingPage() {
           <ScrollingTrace />
         </section>
 
-        {/* ── Spec strip ───────────────────────── */}
-        <div className="border-y border-border py-4 overflow-x-auto bg-card/30">
-          <div className="container mx-auto max-w-6xl px-6">
-            <div className="flex items-center justify-center md:justify-between gap-6 min-w-max md:min-w-0 mx-auto md:mx-0">
-              {specs.map((spec, i) => (
-                <div key={spec.label} className="flex items-center gap-6">
-                  <div className="font-mono text-[10px] tracking-[0.16em] text-muted-foreground uppercase">
-                    {spec.label}
-                    <span className="mx-2 text-primary" aria-hidden="true">—</span>
-                    <span className="text-foreground font-medium">{spec.value}</span>
-                  </div>
-                  {i < specs.length - 1 && (
-                    <span className="block w-px h-3.5 bg-border flex-shrink-0" aria-hidden="true" />
-                  )}
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-
         {/* ── Test modules ─────────────────────── */}
-        <section className="py-24" aria-labelledby="modules-heading">
+        <section className="py-20 md:py-24" aria-labelledby="modules-heading">
           <div className="container mx-auto max-w-6xl px-6">
-            <div className="mb-16">
-              <h2
-                id="modules-heading"
-                className="text-3xl md:text-[2.4rem] font-bold tracking-tight leading-tight mb-3"
-                style={{ fontFamily: 'var(--font-display)' }}
-              >
-                Test modules
-              </h2>
-              <p className="text-muted-foreground text-[0.92rem] max-w-md">
-                Each module runs against native browser APIs — no plugins or extensions required.
-              </p>
-            </div>
+            <SectionIntro
+              eyebrow="Test modules"
+              title="Nine focused checks. One clear result."
+              description="From keys and clicks to camera, audio, display, power, and sensors—each check talks directly to your browser, never a remote testing service."
+              id="modules-heading"
+              icon={Activity}
+            />
 
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
               {modules.map((mod, i) => {
@@ -367,22 +430,137 @@ export function LandingPage() {
           </div>
         </section>
 
-        {/* ── Privacy meter ────────────────────── */}
-        <div className="border-t border-border py-5 bg-card/20" role="complementary" aria-label="Privacy status">
+        {/* ── Trust signals ─────────────────────── */}
+        <section className="border-y border-border py-20 md:py-24 bg-card/30" aria-labelledby="trust-signals-heading">
           <div className="container mx-auto max-w-6xl px-6">
-            <div className="flex flex-wrap items-center gap-x-8 gap-y-3 justify-center">
-              {privacyItems.map((item, i) => (
-                <div key={item.label} className="flex items-center gap-3">
-                  <span className="font-mono text-[10px] tracking-[0.16em] text-muted-foreground uppercase">{item.label}</span>
-                  <span className="font-mono text-[10px] tracking-widest text-primary font-medium uppercase">{item.value}</span>
-                  {i < privacyItems.length - 1 && (
-                    <span className="hidden sm:block w-px h-3 bg-border ml-2" aria-hidden="true" />
-                  )}
-                </div>
-              ))}
+            <SectionIntro
+              eyebrow="Local by design"
+              title="Four promises behind every test."
+              description="No vague privacy language. These guarantees explain exactly where a test runs, when permission is requested, what is collected, and how quickly you get a result."
+              id="trust-signals-heading"
+              icon={ShieldCheck}
+            />
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+              {trustSignals.map((signal, index) => {
+                const Icon = signal.icon;
+                return (
+                  <motion.article
+                    key={signal.label}
+                    tabIndex={0}
+                    className="trust-card group relative min-h-56 overflow-hidden rounded-xl border border-border bg-card p-5 outline-none"
+                    initial={shouldReduce ? {} : { opacity: 0, y: 12 }}
+                    whileInView={shouldReduce ? {} : { opacity: 1, y: 0 }}
+                    whileHover={shouldReduce ? {} : { y: -6 }}
+                    whileFocus={shouldReduce ? {} : { y: -6 }}
+                    viewport={{ once: true, margin: '-40px' }}
+                    transition={{ delay: index * 0.06, duration: 0.4, ease: EASE }}
+                  >
+                    <span className="trust-card-scan" aria-hidden="true" />
+                    <div className="relative z-10 flex items-start justify-between mb-8">
+                      <span className="grid place-items-center w-10 h-10 rounded-lg bg-primary/10 text-primary transition-transform duration-300 group-hover:scale-110 group-hover:-rotate-3 group-focus:scale-110">
+                        <Icon className="w-5 h-5" strokeWidth={1.7} />
+                      </span>
+                      <span className="flex items-center gap-1.5 font-mono text-[9px] tracking-[0.14em] text-primary uppercase">
+                        <span className="signal-status-dot" aria-hidden="true" />
+                        Active
+                      </span>
+                    </div>
+                    <div className="relative z-10">
+                      <p className="font-mono text-[10px] tracking-[0.16em] text-muted-foreground uppercase mb-2">
+                        {signal.label}
+                      </p>
+                      <p
+                        className="text-xl font-bold text-foreground mb-3 group-hover:text-primary group-focus:text-primary transition-colors"
+                        style={{ fontFamily: 'var(--font-display)' }}
+                      >
+                        {signal.value}
+                      </p>
+                      <p className="text-[0.78rem] leading-relaxed text-muted-foreground">
+                        {signal.description}
+                      </p>
+                    </div>
+                  </motion.article>
+                );
+              })}
             </div>
           </div>
-        </div>
+        </section>
+
+        {/* ── Privacy receipt ──────────────────── */}
+        <section className="py-20 md:py-24 bg-card/20" aria-labelledby="privacy-heading">
+          <div className="container mx-auto max-w-6xl px-6">
+            <SectionIntro
+              eyebrow="Privacy, itemized"
+              title="Nothing hidden. Nothing uploaded."
+              description="A readable receipt of every privacy safeguard active during your session—so you can verify the promise instead of simply trusting it."
+              id="privacy-heading"
+              icon={LockKeyhole}
+            />
+
+            <div className="privacy-receipt overflow-hidden rounded-2xl border border-border bg-card shadow-sm">
+              <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-5 px-6 py-7 md:px-8 border-b border-border">
+                <div className="flex items-start gap-4">
+                  <span className="grid place-items-center w-11 h-11 rounded-xl bg-primary text-primary-foreground shrink-0">
+                    <LockKeyhole className="w-5 h-5" strokeWidth={1.8} />
+                  </span>
+                  <div>
+                    <p className="font-mono text-[10px] tracking-[0.18em] text-primary uppercase mb-1">
+                      Session privacy check
+                    </p>
+                    <h3
+                      className="text-xl font-bold tracking-tight"
+                      style={{ fontFamily: 'var(--font-display)' }}
+                    >
+                      Local session verified
+                    </h3>
+                  </div>
+                </div>
+                <div className="inline-flex items-center gap-2 self-start md:self-auto rounded-full border border-primary/20 bg-primary/5 px-3 py-1.5">
+                  <span className="signal-status-dot" aria-hidden="true" />
+                  <span className="font-mono text-[9px] tracking-[0.15em] text-primary uppercase">
+                    4 safeguards active
+                  </span>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
+                {privacyItems.map((item, index) => {
+                  const Icon = item.icon;
+                  return (
+                    <motion.article
+                      key={item.label}
+                      tabIndex={0}
+                      className="privacy-item group relative p-6 outline-none"
+                      whileHover={shouldReduce ? {} : { backgroundColor: 'hsl(var(--primary) / 0.045)' }}
+                      whileFocus={shouldReduce ? {} : { backgroundColor: 'hsl(var(--primary) / 0.045)' }}
+                      transition={{ duration: 0.25 }}
+                    >
+                      <div className="flex items-center justify-between mb-6">
+                        <Icon className="w-5 h-5 text-muted-foreground group-hover:text-primary group-focus:text-primary group-hover:-translate-y-0.5 transition-all" strokeWidth={1.6} />
+                        <span className="font-mono text-[9px] tracking-[0.14em] text-status-pass uppercase">
+                          Pass 0{index + 1}
+                        </span>
+                      </div>
+                      <p className="font-mono text-[9px] tracking-[0.16em] text-muted-foreground uppercase mb-2">
+                        {item.label}
+                      </p>
+                      <p
+                        className="text-lg font-bold text-foreground mb-3 group-hover:text-primary group-focus:text-primary transition-colors"
+                        style={{ fontFamily: 'var(--font-display)' }}
+                      >
+                        {item.value}
+                      </p>
+                      <p className="text-[0.76rem] leading-relaxed text-muted-foreground">
+                        {item.description}
+                      </p>
+                    </motion.article>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+        </section>
       </main>
 
       {/* ── Footer ──────────────────────────────── */}
