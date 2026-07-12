@@ -178,6 +178,98 @@ function DiagnosticTypewriter() {
   );
 }
 
+function AnimatedTestIcon({ moduleId }: { moduleId: string }) {
+  const s = {
+    viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor',
+    strokeWidth: 1.5, strokeLinecap: 'round' as const, strokeLinejoin: 'round' as const,
+    className: 'w-4 h-4',
+  };
+
+  switch (moduleId) {
+    case 'keyboard':
+      return (
+        <svg {...s}>
+          <rect x="2" y="4" width="20" height="16" rx="2" />
+          <rect className="ti-el ti-k1" x="5" y="7" width="3.5" height="3" rx="0.5" strokeWidth="1.2" />
+          <rect className="ti-el ti-k2" x="10.25" y="7" width="3.5" height="3" rx="0.5" strokeWidth="1.2" />
+          <rect className="ti-el ti-k3" x="15.5" y="7" width="3.5" height="3" rx="0.5" strokeWidth="1.2" />
+          <rect x="7" y="13" width="10" height="2.5" rx="0.5" strokeWidth="1.2" />
+        </svg>
+      );
+    case 'mouse':
+      return (
+        <svg {...s}>
+          <rect x="6" y="2" width="12" height="20" rx="6" />
+          <line x1="12" y1="2" x2="12" y2="10" strokeWidth="1" />
+          <rect className="ti-el ti-mscroll" x="10.5" y="5" width="3" height="4" rx="1.5" strokeWidth="1" />
+        </svg>
+      );
+    case 'camera':
+      return (
+        <svg {...s}>
+          <path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z" />
+          <circle cx="12" cy="13" r="4" />
+          <circle className="ti-el ti-iris" cx="12" cy="13" r="1.5" strokeWidth="1" />
+        </svg>
+      );
+    case 'microphone':
+      return (
+        <svg {...s}>
+          <rect x="9" y="1" width="6" height="11" rx="3" />
+          <path d="M5 10a7 7 0 0014 0" />
+          <line x1="12" y1="17" x2="12" y2="22" />
+          <line x1="8" y1="22" x2="16" y2="22" />
+          <path className="ti-el ti-snd1" d="M4 4c-2 2.5-2 6 0 8.5" strokeWidth="1.2" opacity="0" />
+          <path className="ti-el ti-snd2" d="M20 4c2 2.5 2 6 0 8.5" strokeWidth="1.2" opacity="0" />
+        </svg>
+      );
+    case 'speaker':
+      return (
+        <svg {...s}>
+          <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" />
+          <path className="ti-el ti-arc1" d="M15.54 8.46a5 5 0 010 7.07" />
+          <path className="ti-el ti-arc2" d="M19.07 4.93a10 10 0 010 14.14" />
+        </svg>
+      );
+    case 'display':
+      return (
+        <svg {...s}>
+          <rect x="2" y="3" width="20" height="14" rx="2" />
+          <line x1="8" y1="21" x2="16" y2="21" />
+          <line x1="12" y1="17" x2="12" y2="21" />
+          <line className="ti-el ti-scanln" x1="4" y1="5" x2="20" y2="5" strokeWidth="2" opacity="0" />
+        </svg>
+      );
+    case 'battery':
+      return (
+        <svg {...s}>
+          <rect x="2" y="6" width="18" height="12" rx="2" />
+          <line x1="23" y1="10" x2="23" y2="14" strokeWidth="2" />
+          <rect className="ti-el ti-bfill" x="4" y="8.5" width="3" height="7" rx="1" fill="currentColor" stroke="none" opacity="0.4" />
+          <path className="ti-el ti-bolt" d="M12 8.5l-2 3.5h4l-2 3.5" strokeWidth="1.5" fill="none" opacity="0" />
+        </svg>
+      );
+    case 'network':
+      return (
+        <svg {...s}>
+          <circle cx="12" cy="20" r="1.5" fill="currentColor" stroke="none" />
+          <path className="ti-el ti-wf1" d="M8.5 16.5a5 5 0 017 0" />
+          <path className="ti-el ti-wf2" d="M5 13a9 9 0 0114 0" />
+          <path className="ti-el ti-wf3" d="M1.5 9.5a13 13 0 0121 0" />
+        </svg>
+      );
+    case 'sensors':
+      return (
+        <svg {...s} className="w-4 h-4 ti-el ti-phone">
+          <rect x="5" y="2" width="14" height="20" rx="2" />
+          <line x1="12" y1="18" x2="12.01" y2="18" strokeWidth="2" />
+        </svg>
+      );
+    default:
+      return null;
+  }
+}
+
 function SectionIntro({
   eyebrow,
   title,
@@ -444,7 +536,6 @@ export function LandingPage() {
 
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
               {modules.map((mod, i) => {
-                const Icon = mod.icon;
                 return (
                   <motion.div
                     key={mod.id}
@@ -469,7 +560,7 @@ export function LandingPage() {
                             </span>
                           </div>
                           <div className="p-2 rounded-md bg-secondary text-muted-foreground group-hover:bg-primary group-hover:text-primary-foreground transition-all duration-200">
-                            <Icon className="w-4 h-4" strokeWidth={1.5} />
+                            <AnimatedTestIcon moduleId={mod.id} />
                           </div>
                         </div>
 
