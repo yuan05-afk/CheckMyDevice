@@ -1,0 +1,52 @@
+# Redesign Prompt — Paste into your existing Replit Agent chat
+
+Redesign the front-end of CheckMyDevice. Keep all existing functionality (the 9 test modules, light/dark toggle, permission handling) — this is a visual and interaction rebuild, not a rebuild from scratch.
+
+## Why the current version reads as "AI-made"
+Be specific about what to remove, not just what to add:
+- The centered pill "eyebrow" badge above the headline
+- The giant two-line headline where the second line is just the same font in the accent color
+- The 3-icon feature row where every icon sits in an identical rounded colored square
+- The plain white card grid with icon + title + description + chevron, repeated identically for every test
+- The centered icon-above-heading "Built for privacy" block
+- The generic indigo/violet (#6366F1-style) accent used for literally everything
+
+These are the default patterns every AI page-builder reaches for. Removing them — not just animating them — is what will make this feel designed rather than generated.
+
+## New direction: "Instrument Panel"
+CheckMyDevice is a precision instrument. Lean into that literally — the visual language should feel like a piece of test equipment (oscilloscope, signal analyzer, lab meter), not a startup marketing site.
+
+**Color system** (functional, not decorative — each color means something):
+- Background: `#F7F8FA` (cool off-white, not warm cream), card surface `#FFFFFF`
+- Ink: `#14171C`
+- Primary/interactive accent: `#0F8B8D` (signal teal) — replaces the generic indigo everywhere
+- Status green (pass/detected): `#2FA84F`
+- Status amber (warning/needs attention): `#E8A33D`
+- Status red (fail/not detected): `#D5473C`
+- Hairline/grid lines: `#E4E7EB`
+
+**Typography**:
+- Display/headline: Space Grotesk or General Sans — a slightly technical grotesque, not Inter
+- Body: Inter or IBM Plex Sans
+- **All numbers, test IDs, status labels, key codes, and readouts**: IBM Plex Mono or JetBrains Mono. This one change does more than anything else to sell the "instrument" feeling — use it consistently for anything that's data (e.g. "T-01", "42ms", "KeyA", "L / R", "98%").
+
+**Signature element**: a live animated signal trace (thin SVG/canvas line, teal, continuous subtle oscillation like an EKG/oscilloscope) that draws itself in across the hero on page load and reappears as a thin ambient line behind section dividers instead of plain hairline rules. This echoes the waveform mark already in the logo — make that squiggle the thread that ties the whole page together.
+
+## Section-by-section rework
+- **Hero**: Remove the pill badge. Headline in the display face, sentence case, no giant two-tone word-wrap trick — if you want an accent, animate a single underline drawing itself under one phrase instead of just recoloring text. The signal trace draws itself in first, before the headline appears.
+- **Feature row → spec strip**: Replace the 3 icon-in-square cards with a horizontal nameplate-style strip, monospace, small caps, separated by hairlines — like a real equipment label plate. E.g. `LOCAL EXECUTION — 100%` · `PERMISSIONS — ON REQUEST` · `RESULTS — INSTANT`.
+- **Test module cards**: Add a small status LED dot (gray = idle, green = passed) and a monospace test ID (`T-01 KEYBOARD`, `T-02 MOUSE`, etc.) — this numbering is earned here because the tests are a real sequence, not decoration. On hover, reveal a tiny live animated preview inside the card that hints at the real test (e.g. a looping mini waveform on the Microphone card, a cursor-trail doodle on Mouse & Trackpad, a blinking key outline on Keyboard).
+- **Privacy section**: Replace the centered icon block with a horizontal readout strip near the footer that behaves like a live meter, e.g. an animated counter that ticks `DATA TRANSMITTED: 0 KB` — reinforces the privacy claim in the instrument's own voice instead of generic icon-plus-paragraph.
+
+## Animation & interaction spec
+- **Page load**: one orchestrated sequence — signal trace draws in, then headline/subhead/buttons fade-and-rise with a short stagger (~60–80ms between elements). This is the one big moment; don't repeat it elsewhere.
+- **Scroll reveals**: cards and sections fade + slide up (12–16px) via IntersectionObserver, staggered by ~80ms per card, not all at once.
+- **Hover micro-interactions**: cards lift slightly (translateY -4px) with a deepening shadow; buttons scale down slightly on press and spring back; status LEDs pulse once when a test completes.
+- **Easing**: use a custom cubic-bezier (e.g. `cubic-bezier(0.22, 1, 0.36, 1)`), not linear or default ease — it's what makes motion feel "designed."
+- **Respect `prefers-reduced-motion`**: disable non-essential motion for users who request it.
+- Don't scatter effects everywhere — one signature load animation, purposeful scroll reveals, and quiet, consistent hover states. Restraint is what separates "professional" from "busy."
+
+## Guardrails
+- Must stay fully responsive down to mobile.
+- Keyboard focus states must remain visible on every interactive element.
+- Keep the light/dark toggle — apply this same token system (with a dark surface, not pure black) to dark mode too.

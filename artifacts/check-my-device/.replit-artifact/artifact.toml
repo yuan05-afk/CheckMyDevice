@@ -1,0 +1,27 @@
+kind = "web"
+previewPath = "/"
+title = "CheckMyDevice"
+version = "1.0.0"
+id = "artifacts/check-my-device"
+router = "path"
+
+[[services]]
+name = "web"
+paths = [ "/" ]
+localPort = 18940
+
+[services.development]
+run = "pnpm --filter @workspace/check-my-device run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/check-my-device", "run", "build" ]
+serve = "static"
+publicDir = "artifacts/check-my-device/dist/public"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "18940"
+BASE_PATH = "/"

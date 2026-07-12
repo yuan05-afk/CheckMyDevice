@@ -1,0 +1,85 @@
+# Replit Build Prompt — Copy everything below into Replit
+
+Build a **production-quality** web app called **"CheckMyDevice"** — a clean, all-in-one hardware tester that lets someone verify every input/output component on a new PC or laptop (keyboard, mouse/touchpad, camera, microphone, speakers, display, battery, network, and sensors) straight from the browser.
+
+The final product should look and feel like a polished commercial web application rather than a student project. Prioritize exceptional UI/UX, clean architecture, accessibility, responsiveness, and maintainability. Draw design inspiration from **Apple**, **Linear**, **Vercel**, **Raycast**, **Notion**, and **Arc Browser**—minimal, elegant, modern, and highly intuitive.
+
+## Design Direction
+- **Aesthetic:** Clean, minimal, and bright. Lots of white space, soft neutral background (off-white, not stark white), generous padding, rounded corners (12–16px), subtle soft-drop-shadow cards — no clutter, no gradients-as-decoration.
+- **Typography:** A modern sans-serif (Inter, Manrope, or similar). Clear hierarchy: large confident headings, medium-weight labels, comfortable body text size (16px+).
+- **Color:** Neutral base (white/light gray) with a single accent color (e.g., a calm blue or emerald green) used consistently for buttons, active states, and success indicators. Use green for "pass/detected," red/amber for "fail/not detected," gray for "not yet tested."
+- **Light/Dark mode:** Include a toggle (sun/moon icon) in the top nav. Both themes should feel equally polished — dark mode should use a soft charcoal background (not pure black) with the same accent color. Default to the user's system preference and remember their choice.
+- **Layout:** A dashboard-style landing page showing every test as a card in a responsive grid (icon, test name, short description, status badge). Clicking a card opens that test in a focused view (full page or modal) with a "Back to dashboard" action. Include a persistent top nav with the app name, theme toggle, and a "Run All Tests" shortcut.
+- **Micro-interactions:** Gentle hover states on cards, smooth transitions between views, animated status badges when a test completes, subtle button press animations, tasteful page transitions, loading skeletons where appropriate, and smooth fade/scale effects (150–300ms).
+- **Responsive:** Must work cleanly on desktop, tablet, and mobile widths.
+- **Accessibility:** Support keyboard navigation, visible focus states, ARIA labels where appropriate, reduced-motion preference, and sufficient color contrast.
+- **Visual Consistency:** Use an 8px spacing system, consistent border radius throughout the application, and reusable UI components. Every card should have a consistent layout with an icon, title, short description, status badge, and launch button.
+- **Avoid:** Generic Bootstrap styling, Material UI appearance, overly colorful interfaces, excessive gradients, heavy shadows, cluttered layouts, or distracting animations.
+
+## Tech Stack
+Prefer **React + TypeScript** for better maintainability (plain HTML/CSS/JavaScript is acceptable if necessary). Everything should run entirely client-side using native browser APIs—no backend required.
+
+Use modern best practices including reusable components, modular architecture, reusable hooks (if using React), clean file organization, and consistent code formatting.
+
+Use the following browser APIs where applicable:
+- `MediaDevices.getUserMedia()` — camera & microphone
+- `Web Audio API` (AnalyserNode) — live mic input level / waveform visualization
+- `HTMLAudioElement` / oscillator tones — left/right speaker channel test
+- `Battery Status API` (`navigator.getBattery()`) — battery % and charging state, with graceful fallback text if unsupported
+- `Network Information API` (`navigator.connection`) plus a simple fetch-based download speed estimate — network test
+- `DeviceOrientationEvent` / `DeviceMotionEvent` — gyroscope/accelerometer test
+- `PointerEvent` / `Touch` events — multi-touch and touchpad gesture test
+- Standard `keydown`/`keyup` and `mousedown`/`wheel` events — keyboard and mouse test
+
+## Test Modules (build each as its own view/section)
+
+1. **Keyboard Tester** — Full on-screen QWERTY keyboard. Each key highlights (accent color) the instant it's pressed and shows its keycode; track and display which keys have been tested vs. untested so users can confirm every key works.
+
+2. **Mouse & Touchpad Tester** — Detect left/right/middle click, scroll wheel direction, double-click speed, and cursor movement smoothness (a trailing line/dot that follows the pointer). Show a live readout of each event as it fires.
+
+3. **Camera Tester** — Live video preview after permission is granted, show resolution/frame rate, and a dropdown to switch between available cameras if more than one is detected.
+
+4. **Microphone Tester** — Live animated volume meter / waveform reacting to input in real time, plus a numeric dB-style level indicator, so the user can talk and instantly see it's picking up sound.
+
+5. **Speaker/Audio Tester** — Buttons to play a tone on the left channel only, right channel only, and both, so users can confirm stereo output is correct. Include a volume test tone sweep.
+
+6. **Display & Color Tester** — Full-screen solid color swatches (red, green, blue, white, black, and a grayscale gradient) to check for dead/stuck pixels, plus a sharpness/pattern screen (fine grid lines).
+
+7. **Battery Tester** — Show battery percentage, charging status, and estimated time remaining; update live as it changes.
+
+8. **Network Tester** — Show connection type (Wi-Fi/Ethernet/Cellular if available), online/offline status, and a simple estimated download speed test with a progress indicator.
+
+9. **Sensors Tester** — Show live gyroscope/accelerometer values (tilt the device and watch numbers respond) and a multi-touch test area that displays each simultaneous touch point (for touchscreen laptops).
+
+## UX Requirements
+- Every test that needs browser permission (camera, mic, sensors) should show a friendly explanation *before* the permission prompt, and a clear fallback message if permission is denied or the API isn't supported by the browser.
+- Gracefully handle unsupported browser APIs, unavailable hardware, disconnected devices, or permission denials without breaking the application.
+- Each test card on the dashboard should reflect real-time status: **Not tested / Working / Issue detected**.
+- Include an animated overall testing progress indicator showing how many tests have been completed.
+- Include an overall **Results Summary** page/section that aggregates the status of every test, with an option to re-run any individual test.
+- The Results Summary should include:
+  - Total tests completed
+  - Passed
+  - Failed
+  - Unsupported
+  - Overall device health summary
+  - Timestamp of the latest test
+- Footer note: "Some tests require browser permissions and may not be supported on all browsers/devices."
+
+## Performance & Code Quality
+- Lazy-load heavier modules when appropriate.
+- Keep the UI responsive while tests are running.
+- Write clean, modular, maintainable code.
+- Use reusable components and avoid duplicated logic.
+- Optimize for modern browsers.
+- Keep animations smooth without affecting performance.
+
+## Stretch Goals (nice to have, not required)
+- Export the results summary as a shareable/printable report (PDF or simple image).
+- Keyboard shortcut to jump between tests.
+- Subtle sound/haptic-style confirmation when a test passes.
+- Progressive Web App (PWA) support.
+- Remember previous test results locally.
+- Beautiful splash/preloader screen while the application initializes.
+- Command palette (Ctrl/Cmd + K) for quickly navigating between tests.
+- Confetti animation when all supported tests pass successfully.
