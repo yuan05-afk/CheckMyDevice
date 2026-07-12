@@ -72,6 +72,7 @@
     "zod": "catalog:"
   },
   "dependencies": {
-    "canvas-confetti": "^1.9.4"
+    "canvas-confetti": "^1.9.4",
+    "lenis": "^1.3.25"
   }
 }

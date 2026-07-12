@@ -1,7 +1,9 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { Link } from 'wouter';
-import { motion, useReducedMotion } from 'framer-motion';
+import { motion, useReducedMotion, useScroll, useTransform } from 'framer-motion';
 import { useTheme } from 'next-themes';
+import Lenis from 'lenis';
+import 'lenis/dist/lenis.css';
 import {
   Activity,
   Keyboard,
@@ -205,8 +207,57 @@ function SectionIntro({
       <p className="text-[0.92rem] md:text-base text-muted-foreground leading-relaxed">
         {description}
       </p>
-      <span className="section-intro-rule" aria-hidden="true" />
     </div>
+  );
+}
+
+function ScrollChapter({
+  children,
+  className = '',
+  labelledBy,
+  label,
+}: {
+  children: ReactNode;
+  className?: string;
+  labelledBy?: string;
+  label?: string;
+}) {
+  const chapterRef = useRef<HTMLElement>(null);
+  const shouldReduce = useReducedMotion();
+  const { scrollYProgress } = useScroll({
+    target: chapterRef,
+    offset: ['start end', 'end start'],
+  });
+  const opacity = useTransform(
+    scrollYProgress,
+    [0, 0.12, 0.88, 1],
+    [0, 1, 1, 0],
+  );
+  const y = useTransform(
+    scrollYProgress,
+    [0, 0.15, 0.85, 1],
+    ['12vh', '0vh', '0vh', '-12vh'],
+  );
+  const scale = useTransform(
+    scrollYProgress,
+    [0, 0.14, 0.86, 1],
+    [0.975, 1, 1, 0.975],
+  );
+
+  return (
+    <section
+      ref={chapterRef}
+      className={`landing-chapter ${className}`}
+      aria-labelledby={labelledBy}
+      aria-label={label}
+    >
+      <motion.div
+        className="w-full"
+        style={shouldReduce ? undefined : { opacity, y, scale }}
+      >
+        {children}
+      </motion.div>
+    </section>
   );
 }
 
@@ -284,6 +335,19 @@ export function LandingPage() {
   const { theme, setTheme } = useTheme();
   const shouldReduce = useReducedMotion();
 
+  useEffect(() => {
+    if (shouldReduce) return;
+
+    const lenis = new Lenis({
+      autoRaf: true,
+      duration: 1.15,
+      smoothWheel: true,
+      touchMultiplier: 1.05,
+    });
+
+    return () => lenis.destroy();
+  }, [shouldReduce]);
+
   const fadeUp = (delay: number) =>
     shouldReduce
       ? {}
@@ -297,7 +361,7 @@ export function LandingPage() {
     <div className="min-h-[100dvh] flex flex-col bg-background text-foreground font-sans antialiased selection:bg-primary/15 selection:text-primary">
 
       {/* ── Nav ────────────────────────────────── */}
-      <header className="sticky top-0 z-50 w-full border-b border-border bg-background/90 backdrop-blur-md">
+      <header className="sticky top-0 z-50 w-full bg-background/90 backdrop-blur-md">
         <div className="container mx-auto max-w-6xl px-6 h-[58px] flex items-center justify-between">
           <div className="flex items-center gap-2.5">
             <Activity className="w-5 h-5 text-primary" strokeWidth={2} />
@@ -326,7 +390,7 @@ export function LandingPage() {
 
       <main className="flex-1">
         {/* ── Hero ─────────────────────────────── */}
-        <section className="relative overflow-hidden pt-28 pb-0 md:pt-40">
+        <ScrollChapter className="relative overflow-hidden pt-24 pb-0 md:pt-32" label="CheckMyDevice introduction">
           <div className="container mx-auto max-w-4xl px-6 text-center">
             {/* Headline with word animation */}
             <AnimatedHeadline />
@@ -357,10 +421,10 @@ export function LandingPage() {
 
           {/* Scrolling trace — sits BELOW the text as a visual divider */}
           <ScrollingTrace />
-        </section>
+        </ScrollChapter>
 
         {/* ── Test modules ─────────────────────── */}
-        <section className="py-20 md:py-24" aria-labelledby="modules-heading">
+        <ScrollChapter className="py-20 md:py-24" labelledBy="modules-heading">
           <div className="container mx-auto max-w-6xl px-6">
             <SectionIntro
               eyebrow="Test modules"
@@ -378,7 +442,7 @@ export function LandingPage() {
                     key={mod.id}
                     initial={shouldReduce ? {} : { opacity: 0, y: 14 }}
                     whileInView={shouldReduce ? {} : { opacity: 1, y: 0 }}
-                    viewport={{ once: true, margin: '-60px' }}
+                    viewport={{ once: false, amount: 0.18 }}
                     transition={{ delay: (i % 3) * 0.07, duration: 0.45, ease: EASE }}
                   >
                     <Link href={`/test/${mod.id}`} data-testid={`landing-feature-${mod.id}`}>
@@ -428,10 +492,10 @@ export function LandingPage() {
               </Button>
             </div>
           </div>
-        </section>
+        </ScrollChapter>
 
         {/* ── Trust signals ─────────────────────── */}
-        <section className="border-y border-border py-20 md:py-24 bg-card/30" aria-labelledby="trust-signals-heading">
+        <ScrollChapter className="py-20 md:py-24 bg-card/30" labelledBy="trust-signals-heading">
           <div className="container mx-auto max-w-6xl px-6">
             <SectionIntro
               eyebrow="Local by design"
@@ -453,7 +517,7 @@ export function LandingPage() {
                     whileInView={shouldReduce ? {} : { opacity: 1, y: 0 }}
                     whileHover={shouldReduce ? {} : { y: -6 }}
                     whileFocus={shouldReduce ? {} : { y: -6 }}
-                    viewport={{ once: true, margin: '-40px' }}
+                    viewport={{ once: false, amount: 0.22 }}
                     transition={{ delay: index * 0.06, duration: 0.4, ease: EASE }}
                   >
                     <span className="trust-card-scan" aria-hidden="true" />
@@ -485,10 +549,10 @@ export function LandingPage() {
               })}
             </div>
           </div>
-        </section>
+        </ScrollChapter>
 
         {/* ── Privacy receipt ──────────────────── */}
-        <section className="py-20 md:py-24 bg-card/20" aria-labelledby="privacy-heading">
+        <ScrollChapter className="py-20 md:py-24 bg-card/20" labelledBy="privacy-heading">
           <div className="container mx-auto max-w-6xl px-6">
             <SectionIntro
               eyebrow="Privacy, itemized"
@@ -532,9 +596,12 @@ export function LandingPage() {
                       key={item.label}
                       tabIndex={0}
                       className="privacy-item group relative p-6 outline-none"
+                      initial={shouldReduce ? {} : { opacity: 0, y: 18 }}
+                      whileInView={shouldReduce ? {} : { opacity: 1, y: 0 }}
                       whileHover={shouldReduce ? {} : { backgroundColor: 'hsl(var(--primary) / 0.045)' }}
                       whileFocus={shouldReduce ? {} : { backgroundColor: 'hsl(var(--primary) / 0.045)' }}
-                      transition={{ duration: 0.25 }}
+                      viewport={{ once: false, amount: 0.22 }}
+                      transition={{ delay: index * 0.05, duration: 0.35, ease: EASE }}
                     >
                       <div className="flex items-center justify-between mb-6">
                         <Icon className="w-5 h-5 text-muted-foreground group-hover:text-primary group-focus:text-primary group-hover:-translate-y-0.5 transition-all" strokeWidth={1.6} />
@@ -560,11 +627,11 @@ export function LandingPage() {
               </div>
             </div>
           </div>
-        </section>
+        </ScrollChapter>
       </main>
 
       {/* ── Footer ──────────────────────────────── */}
-      <footer className="border-t border-border py-8 bg-background">
+      <footer className="py-8 bg-background">
         <div className="container mx-auto max-w-6xl px-6 flex flex-col sm:flex-row items-center justify-between gap-4">
           <div className="flex items-center gap-2">
             <Activity className="w-4 h-4 text-primary" strokeWidth={2} />

@@ -269,10 +269,14 @@
   padding: 0.9rem 1rem;
   border: 1px solid hsl(var(--border));
   border-radius: 0.75rem;
-  background:
-    linear-gradient(135deg, hsl(var(--primary) / 0.055), transparent 58%),
-    hsl(var(--card));
-  box-shadow: inset 3px 0 0 hsl(var(--primary));
+  background: hsl(var(--card));
+}
+
+.landing-chapter {
+  display: flex;
+  min-height: calc(100svh - 58px);
+  align-items: center;
+  overflow: clip;
 }
 
 .diagnostic-typewriter::after {
@@ -317,34 +321,6 @@
   font-size: 0.62rem;
   letter-spacing: 0.15em;
   text-transform: uppercase;
-}
-
-.section-intro-rule {
-  position: relative;
-  display: block;
-  width: 4.5rem;
-  height: 2px;
-  margin: 1.5rem auto 0;
-  border-radius: 999px;
-  background: linear-gradient(
-    90deg,
-    transparent,
-    hsl(var(--primary)),
-    transparent
-  );
-}
-
-.section-intro-rule::after {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  width: 0.4rem;
-  height: 0.4rem;
-  border-radius: 999px;
-  background: hsl(var(--primary));
-  box-shadow: 0 0 0 4px hsl(var(--primary) / 0.12);
-  content: '';
-  transform: translate(-50%, -50%);
 }
 
 @keyframes led-pulse {
