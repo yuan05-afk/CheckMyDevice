@@ -30,6 +30,8 @@ import {
   type LucideIcon,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import diagnosticHero from '@/assets/diagnostic-hero-light-devices-v1.png';
+import diagnosticHeroNight from '@/assets/diagnostic-hero-night-v2.png';
 
 /* ─── Scrolling EKG trace ──────────────────────────
    Two identical 1440-wide patterns side-by-side (2880 total).
@@ -88,6 +90,33 @@ function ScrollingTrace() {
   );
 }
 
+function HeroBackdrop() {
+  const shouldReduce = useReducedMotion();
+
+  return (
+    <div className="hero-backdrop" aria-hidden="true">
+      <motion.div
+        className="hero-backdrop-art"
+        initial={shouldReduce ? false : { opacity: 0, scale: 1.025 }}
+        animate={{ opacity: 1, scale: 1 }}
+        transition={{ duration: 1.1, ease: EASE }}
+      >
+        <img
+          src={diagnosticHero}
+          alt=""
+          className="hero-backdrop-image hero-backdrop-image--light"
+        />
+        <img
+          src={diagnosticHeroNight}
+          alt=""
+          className="hero-backdrop-image hero-backdrop-image--night"
+        />
+      </motion.div>
+      <div className="hero-backdrop-wash" />
+    </div>
+  );
+}
+
 const EASE = [0.22, 1, 0.36, 1] as const;
 
 function AnimatedHeadline() {
@@ -101,7 +130,7 @@ function AnimatedHeadline() {
 
   return (
     <h1
-      className="text-[clamp(2.8rem,6.5vw,5.2rem)] font-bold leading-[1.06] tracking-tight mb-6 text-foreground"
+      className="hero-headline font-bold leading-[1.06] tracking-tight mb-6 text-foreground text-balance"
       style={{ fontFamily: 'var(--font-display)' }}
     >
       <motion.span
@@ -461,7 +490,7 @@ export function LandingPage() {
     <div className="min-h-[100dvh] flex flex-col bg-background text-foreground font-sans antialiased selection:bg-primary/15 selection:text-primary">
 
       {/* ── Nav ────────────────────────────────── */}
-      <header className="sticky top-0 z-50 w-full bg-background/90 backdrop-blur-md">
+      <header className="sticky top-0 z-50 w-full bg-background">
         <div className="container mx-auto max-w-6xl px-6 h-[58px] flex items-center justify-between">
           <div className="flex items-center gap-2.5">
             <Activity className="w-5 h-5 text-primary" strokeWidth={2} />
@@ -490,14 +519,15 @@ export function LandingPage() {
 
       <main className="flex-1">
         {/* ── Hero ─────────────────────────────── */}
-        <ScrollChapter className="relative overflow-hidden min-h-[calc(100dvh-58px)] pt-24 pb-0 md:pt-32" label="CheckMyDevice introduction">
-          <div className="container mx-auto max-w-4xl px-6 text-center">
+        <ScrollChapter className="hero-chapter relative overflow-hidden min-h-[calc(100dvh-58px)]" label="CheckMyDevice introduction">
+          <HeroBackdrop />
+          <div className="hero-content-safe container mx-auto max-w-4xl px-5 sm:px-6 text-center">
             {/* Headline with word animation */}
             <AnimatedHeadline />
 
             <DiagnosticTypewriter />
 
-            <motion.div {...fadeUp(0.88)} className="flex flex-col sm:flex-row items-center justify-center gap-3 mb-14">
+            <motion.div {...fadeUp(0.88)} className="flex flex-col sm:flex-row items-center justify-center gap-3 mb-14 md:mb-20">
               <Button
                 asChild
                 size="lg"
@@ -519,8 +549,9 @@ export function LandingPage() {
             </motion.div>
           </div>
 
-          {/* Scrolling trace — sits BELOW the text as a visual divider */}
-          <ScrollingTrace />
+          <div className="hero-trace-wrap">
+            <ScrollingTrace />
+          </div>
         </ScrollChapter>
 
         {/* ── Test modules ─────────────────────── */}

@@ -263,6 +263,22 @@
   will-change: background-position;
 }
 
+.hero-headline {
+  font-size: clamp(2.05rem, 6.5vw, 5.2rem);
+}
+
+@media (min-width: 768px) and (max-width: 1799px) {
+  .hero-headline {
+    font-size: clamp(2.4rem, 4vw, 4.5rem);
+  }
+}
+
+@media (max-width: 767px) {
+  .hero-headline {
+    font-size: clamp(2.05rem, 9vw, 3.25rem);
+  }
+}
+
 .diagnostic-typewriter {
   position: relative;
   overflow: hidden;
@@ -276,6 +292,183 @@
   display: flex;
   align-items: center;
   position: relative;
+}
+
+.hero-chapter {
+  background: hsl(var(--background));
+}
+
+.hero-chapter > .w-full {
+  position: relative;
+  display: flex;
+  min-height: calc(100svh - 58px);
+  align-items: center;
+  justify-content: center;
+  padding: clamp(8rem, 18vh, 12rem) 0 5rem;
+}
+
+.hero-backdrop {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.hero-backdrop-art {
+  position: absolute;
+  inset: clamp(0.75rem, 2vh, 1.5rem) 0 2.5rem;
+  transform-origin: center;
+}
+
+.hero-backdrop-image {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  max-width: none;
+  object-fit: contain;
+  object-position: 50% 0;
+  transition: opacity 350ms ease;
+  -webkit-mask-image:
+    radial-gradient(ellipse 34% 46% at 14% 78%, #000 0 48%, transparent 78%),
+    radial-gradient(ellipse 27% 44% at 88% 76%, #000 0 50%, transparent 80%);
+  -webkit-mask-composite: source-over;
+  mask-image:
+    radial-gradient(ellipse 34% 46% at 14% 78%, #000 0 48%, transparent 78%),
+    radial-gradient(ellipse 27% 44% at 88% 76%, #000 0 50%, transparent 80%);
+  mask-composite: add;
+  user-select: none;
+}
+
+.hero-backdrop-image--light {
+  opacity: 1;
+}
+
+.hero-backdrop-image--night {
+  opacity: 0;
+}
+
+.dark .hero-backdrop-image--light {
+  opacity: 0;
+}
+
+.dark .hero-backdrop-image--night {
+  opacity: 1;
+}
+
+.hero-backdrop-wash {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(
+    ellipse 42% 48% at 50% 55%,
+    hsl(var(--background) / 0.24) 0,
+    hsl(var(--background) / 0.08) 54%,
+    transparent 78%
+  );
+}
+
+.dark .hero-backdrop-wash {
+  background: radial-gradient(
+    ellipse 44% 50% at 50% 54%,
+    hsl(var(--background) / 0.12) 0,
+    hsl(var(--background) / 0.04) 58%,
+    transparent 80%
+  );
+}
+
+.hero-content-safe {
+  position: relative;
+  z-index: 5;
+}
+
+.hero-content-safe::before {
+  position: absolute;
+  inset: -12% -10%;
+  z-index: -1;
+  border-radius: 50%;
+  background: radial-gradient(
+    ellipse,
+    hsl(var(--background) / 0.3) 0 44%,
+    transparent 74%
+  );
+  content: '';
+  pointer-events: none;
+}
+
+.hero-trace-wrap {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  z-index: 4;
+}
+
+.dark .hero-content-safe::before {
+  background: radial-gradient(
+    ellipse,
+    hsl(var(--background) / 0.16) 0 44%,
+    transparent 74%
+  );
+}
+
+@media (max-width: 767px) {
+  .hero-chapter > .w-full {
+    min-height: calc(100svh - 58px);
+    padding: 8rem 0 4.5rem;
+  }
+
+  .hero-backdrop-art {
+    inset: 0.75rem 0 auto;
+    height: min(58vw, 15rem);
+  }
+
+  .hero-backdrop-wash {
+    background:
+      linear-gradient(
+        to bottom,
+        hsl(var(--background) / 0.04),
+        hsl(var(--background) / 0.34) 30%,
+        hsl(var(--background) / 0.68) 82%
+      ),
+      radial-gradient(
+        ellipse 72% 48% at 50% 54%,
+        hsl(var(--background) / 0.48),
+        transparent 82%
+      );
+  }
+
+  .dark .hero-backdrop-wash {
+    background: linear-gradient(
+      to bottom,
+      transparent,
+      hsl(var(--background) / 0.2) 28%,
+      hsl(var(--background) / 0.54) 78%,
+      hsl(var(--background) / 0.72)
+    );
+  }
+
+  .hero-content-safe::before {
+    inset: -8% -20%;
+  }
+
+  .diagnostic-typewriter {
+    padding: 0.8rem 0.85rem;
+  }
+
+  .hero-trace-wrap .signal-trace {
+    height: 42px;
+  }
+}
+
+@media (max-width: 390px) {
+  .hero-chapter > .w-full {
+    padding-top: 7.25rem;
+  }
+
+  .hero-backdrop-art {
+    height: 13.5rem;
+  }
 }
 
 .diagnostic-typewriter::after {
