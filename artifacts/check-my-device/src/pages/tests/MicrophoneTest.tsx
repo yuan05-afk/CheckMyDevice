@@ -1,27 +1,28 @@
 import { useEffect, useRef, useState } from 'react';
 import { motion } from 'framer-motion';
-import { Mic as MicIcon, ShieldAlert } from 'lucide-react';
+import { LockKeyhole, Mic as MicIcon, ShieldAlert, Waves } from 'lucide-react';
 import { useTestContext } from '@/context/TestContext';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { TestPageHeader } from '@/components/TestPageHeader';
+import { MetricTile, PanelHeading, TestStatusBadge, WaitingReadout } from '@/components/DiagnosticPrimitives';
 
 export function MicrophoneTest() {
   const { results, setResult } = useTestContext();
   const [stream, setStream] = useState<MediaStream | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [volume, setVolume] = useState<number>(0);
-  
+  const [volume, setVolume] = useState(0);
+  const [peak, setPeak] = useState(0);
+  const streamRef = useRef<MediaStream | null>(null);
   const audioContextRef = useRef<AudioContext | null>(null);
   const analyserRef = useRef<AnalyserNode | null>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const animationFrameRef = useRef<number>(0);
-  
+  const animationFrameRef = useRef(0);
+
   const stopStream = () => {
-    if (stream) {
-      stream.getTracks().forEach(track => track.stop());
-      setStream(null);
-    }
+    streamRef.current?.getTracks().forEach((track) => track.stop());
+    streamRef.current = null;
+    setStream(null);
     if (audioContextRef.current) {
       audioContextRef.current.close();
       audioContextRef.current = null;
@@ -29,187 +30,141 @@ export function MicrophoneTest() {
     cancelAnimationFrame(animationFrameRef.current);
   };
 
+  const drawWaveform = () => {
+    const analyser = analyserRef.current;
+    const canvas = canvasRef.current;
+    const ctx = canvas?.getContext('2d');
+    if (!analyser || !canvas || !ctx) return;
+    const data = new Uint8Array(analyser.frequencyBinCount);
+
+    const draw = () => {
+      animationFrameRef.current = requestAnimationFrame(draw);
+      analyser.getByteTimeDomainData(data);
+      let sum = 0;
+      for (let index = 0; index < data.length; index++) {
+        const normalized = (data[index] - 128) / 128;
+        sum += normalized * normalized;
+      }
+      const level = Math.min(100, Math.floor(Math.sqrt(sum / data.length) * 400));
+      setVolume(level);
+      setPeak((previous) => Math.max(level, Math.floor(previous * 0.995)));
+
+      const isDark = document.documentElement.classList.contains('dark');
+      const primary = getComputedStyle(document.documentElement).getPropertyValue('--primary').trim();
+      ctx.fillStyle = isDark ? '#181C24' : '#F7F8FA';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      ctx.strokeStyle = isDark ? 'rgba(255,255,255,0.045)' : 'rgba(0,0,0,0.045)';
+      ctx.lineWidth = 1;
+      for (let y = 24; y < canvas.height; y += 24) { ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(canvas.width, y); ctx.stroke(); }
+      ctx.strokeStyle = `hsl(${primary})`;
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      const sliceWidth = canvas.width / data.length;
+      data.forEach((sample, index) => {
+        const x = index * sliceWidth;
+        const y = (sample / 128) * canvas.height / 2;
+        if (index === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+      });
+      ctx.stroke();
+    };
+    draw();
+  };
+
   const startMic = async () => {
     stopStream();
     setError(null);
-    
+    setPeak(0);
     try {
-      const newStream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      setStream(newStream);
-      
-      const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
+      const nextStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      streamRef.current = nextStream;
+      setStream(nextStream);
+      const AudioContextClass = window.AudioContext || (window as typeof window & { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
       const audioContext = new AudioContextClass();
       audioContextRef.current = audioContext;
-      
-      const source = audioContext.createMediaStreamSource(newStream);
       const analyser = audioContext.createAnalyser();
       analyser.fftSize = 256;
-      analyser.smoothingTimeConstant = 0.8;
-      
-      source.connect(analyser);
+      analyser.smoothingTimeConstant = 0.82;
+      audioContext.createMediaStreamSource(nextStream).connect(analyser);
       analyserRef.current = analyser;
-      
       drawWaveform();
       setResult('microphone', 'working');
-    } catch (err: any) {
-      console.error("Mic access error:", err);
-      setError(err.message || "Failed to access microphone");
+    } catch (caught) {
+      const message = caught instanceof Error ? caught.message : 'Failed to access microphone';
+      console.error('Microphone access error:', caught);
+      setError(message);
       setResult('microphone', 'issue');
     }
   };
 
-  const drawWaveform = () => {
-    if (!analyserRef.current || !canvasRef.current) return;
-    
-    const canvas = canvasRef.current;
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return;
-    
-    const analyser = analyserRef.current;
-    const bufferLength = analyser.frequencyBinCount;
-    const dataArray = new Uint8Array(bufferLength);
-    
-    const draw = () => {
-      animationFrameRef.current = requestAnimationFrame(draw);
-      
-      analyser.getByteTimeDomainData(dataArray);
-      
-      let sum = 0;
-      for (let i = 0; i < bufferLength; i++) {
-        const val = (dataArray[i] - 128) / 128;
-        sum += val * val;
-      }
-      const rms = Math.sqrt(sum / bufferLength);
-      setVolume(Math.min(100, Math.floor(rms * 400)));
-      
-      // Always draw on a dark background for the oscilloscope vibe
-      ctx.fillStyle = '#0D0D0D';
-      ctx.fillRect(0, 0, canvas.width, canvas.height);
-      
-      ctx.lineWidth = 3;
-      ctx.strokeStyle = '#4F46E5'; // primary indigo
-      ctx.beginPath();
-      
-      const sliceWidth = canvas.width * 1.0 / bufferLength;
-      let x = 0;
-      
-      for (let i = 0; i < bufferLength; i++) {
-        const v = dataArray[i] / 128.0;
-        const y = v * canvas.height / 2;
-        
-        if (i === 0) {
-          ctx.moveTo(x, y);
-        } else {
-          ctx.lineTo(x, y);
-        }
-        
-        x += sliceWidth;
-      }
-      
-      ctx.lineTo(canvas.width, canvas.height / 2);
-      ctx.stroke();
-    };
-    
-    draw();
-  };
-
   useEffect(() => {
-    const handleResize = () => {
-      if (canvasRef.current) {
-        const parent = canvasRef.current.parentElement;
-        if (parent) {
-          canvasRef.current.width = parent.clientWidth;
-          canvasRef.current.height = parent.clientHeight;
-        }
-      }
+    const resizeCanvas = () => {
+      const canvas = canvasRef.current;
+      const parent = canvas?.parentElement;
+      if (canvas && parent) { canvas.width = parent.clientWidth; canvas.height = parent.clientHeight; }
     };
-    
-    window.addEventListener('resize', handleResize);
-    setTimeout(handleResize, 0); 
-    
-    return () => {
-      window.removeEventListener('resize', handleResize);
-      stopStream();
-    };
+    window.addEventListener('resize', resizeCanvas);
+    resizeCanvas();
+    return () => { window.removeEventListener('resize', resizeCanvas); stopStream(); };
   }, []);
 
-  const handleMarkIssue = () => setResult('microphone', 'issue');
-  const handleMarkWorking = () => setResult('microphone', 'working');
-
   return (
-    <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="flex flex-col max-w-4xl mx-auto w-full">
+    <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="test-page mx-auto flex w-full max-w-5xl flex-col">
       <TestPageHeader
         testId="T-04"
         title="Microphone"
-        description="Test audio input and levels."
-        onMarkIssue={handleMarkIssue}
-        onMarkWorking={handleMarkWorking}
+        description="Watch the waveform, input level, and peak response while you speak."
+        onMarkIssue={() => setResult('microphone', 'issue')}
+        onMarkWorking={() => setResult('microphone', 'working')}
       />
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <Card className="md:col-span-2 shadow-none border-border/60">
-          <CardContent className="p-6">
-            <p className="spec-item mb-3">Audio input</p>
-            <div className="aspect-[21/9] bg-[#0D0D0D] rounded-xl overflow-hidden relative flex items-center justify-center border border-border/50 shadow-inner">
+      <div className="grid grid-cols-1 gap-5 lg:grid-cols-[minmax(0,1fr)_18rem]">
+        <Card className="instrument-panel">
+          <CardContent className="p-5 sm:p-6">
+            <PanelHeading label="Live waveform" description="Sound is analyzed in real time and never leaves this tab." trailing={<TestStatusBadge status={results.microphone} />} className="mb-5" />
+            <div className="live-readout relative flex min-h-[350px] items-center justify-center overflow-hidden">
               {!stream && !error && (
-                <div className="text-center p-6 flex flex-col items-center gap-4 z-10 absolute inset-0 bg-[#0D0D0D]/90 backdrop-blur-sm justify-center">
-                  <div className="w-16 h-16 bg-primary/20 rounded-full flex items-center justify-center text-primary">
-                    <MicIcon className="w-8 h-8" />
-                  </div>
-                  <div>
-                    <h3 className="font-semibold mb-1 text-white">Microphone Access Required</h3>
-                    <p className="text-sm text-gray-400 max-w-sm">
-                      To test your microphone, the browser needs permission. Audio is processed locally.
-                    </p>
-                  </div>
-                  <Button onClick={() => startMic()} size="lg" className="font-semibold mt-2">
-                    Request Permission
-                  </Button>
+                <div className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-5 bg-card/92 px-6 text-center backdrop-blur-md">
+                  <div className="test-hero-icon"><MicIcon className="h-8 w-8" /></div>
+                  <div><h3 className="font-display text-lg font-bold">Ready to listen locally</h3><p className="mt-2 max-w-md text-sm leading-relaxed text-muted-foreground">Grant microphone permission, then speak to see the signal trace react.</p></div>
+                  <Button onClick={startMic} className="h-11 min-w-48 gap-2 font-semibold"><Waves className="h-4 w-4 shrink-0" /> Start Microphone Test</Button>
                 </div>
               )}
-              
               {error && (
-                <div className="text-center p-6 flex flex-col items-center gap-4 z-10 absolute inset-0 bg-[#0D0D0D]/90 backdrop-blur-sm justify-center">
-                  <div className="w-16 h-16 bg-destructive/20 rounded-full flex items-center justify-center text-destructive">
-                    <ShieldAlert className="w-8 h-8" />
-                  </div>
-                  <div>
-                    <h3 className="font-semibold mb-1 text-white">Access Denied</h3>
-                    <p className="text-sm text-gray-400 max-w-sm">
-                      {error}. Please check your browser settings and try again.
-                    </p>
-                  </div>
-                  <Button variant="outline" onClick={() => startMic()} className="font-semibold mt-2">
-                    Retry
-                  </Button>
+                <div className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-5 bg-card/92 px-6 text-center backdrop-blur-md">
+                  <div className="test-hero-icon border-status-fail/25 bg-status-fail/10 text-status-fail"><ShieldAlert className="h-8 w-8" /></div>
+                  <div><h3 className="font-display text-lg font-bold">Microphone unavailable</h3><p className="mt-2 max-w-md text-sm leading-relaxed text-muted-foreground">{error}. Check browser permissions, then retry.</p></div>
+                  <Button variant="outline" onClick={startMic} className="h-11 font-semibold">Retry Microphone</Button>
                 </div>
               )}
-              
-              <canvas ref={canvasRef} className="w-full h-full block" />
+              <canvas ref={canvasRef} className="absolute inset-0 h-full w-full" />
+              {stream && <div className="absolute left-4 top-4 z-10 flex items-center gap-2 rounded-md border border-primary/20 bg-card/75 px-3 py-2 font-mono text-[10px] uppercase tracking-[0.12em] backdrop-blur-md"><span className="signal-status-dot" /> Listening</div>}
+            </div>
+            <div className="mt-5 grid grid-cols-3 gap-3">
+              <MetricTile label="Input" value={stream ? 'Active' : 'Idle'} accent={Boolean(stream)} />
+              <MetricTile label="Level" value={`${volume}%`} />
+              <MetricTile label="Peak" value={`${peak}%`} />
             </div>
           </CardContent>
         </Card>
 
-        <div className="flex flex-col gap-6">
-          <Card className="shadow-none border-border/60">
-            <CardContent className="p-6 flex flex-col gap-5">
-              <h3 className="font-semibold text-sm uppercase tracking-wider text-muted-foreground">Input Level</h3>
-              
-              <div className="flex items-center gap-4">
-                <div className="flex-1 h-3 bg-secondary rounded-full overflow-hidden flex border border-border/50">
-                  <div 
-                    className="h-full bg-primary transition-all duration-75 ease-out"
-                    style={{ width: `${volume}%` }}
-                  />
-                </div>
-                <div className="w-12 text-right font-mono font-bold text-sm tabular-nums text-foreground">
-                  {volume}%
+        <div className="flex flex-col gap-5">
+          <Card className="instrument-panel">
+            <CardContent className="p-5">
+              <PanelHeading label="Input level" description="Live signal intensity" className="mb-5" />
+              <div className="live-readout p-5">
+                <div className="relative z-10 flex items-end justify-between"><span className="spec-item">Current</span><span className="readout-value text-4xl text-primary">{volume}<span className="ml-1 text-base text-muted-foreground">%</span></span></div>
+                <div className="relative z-10 mt-5 grid grid-cols-10 gap-1">
+                  {Array.from({ length: 10 }, (_, index) => <span key={index} className={`h-12 rounded-sm transition-colors ${volume >= (index + 1) * 10 ? index >= 8 ? 'bg-status-warn' : 'bg-primary' : 'bg-secondary'}`} />)}
                 </div>
               </div>
-              
-              <div className="text-sm font-medium text-muted-foreground bg-secondary p-4 rounded-xl">
-                <p>Speak into your microphone. The bar and waveform should move when you make noise.</p>
-              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="instrument-panel">
+            <CardContent className="p-5">
+              <PanelHeading label="Signal check" className="mb-4" />
+              {stream ? <div className="space-y-3"><div className="flex justify-between text-sm"><span className="text-muted-foreground">Response</span><span className="readout-value text-xs">{peak > 3 ? 'Detected' : 'Waiting'}</span></div><div className="flex justify-between text-sm"><span className="text-muted-foreground">Processing</span><span className="readout-value text-xs">Local</span></div></div> : <div className="live-readout flex min-h-28 items-center justify-center p-4"><WaitingReadout title="Awaiting input" detail="Start the microphone test" /></div>}
+              <div className="mt-4 flex items-center gap-2 border-t border-border/70 pt-4 text-xs text-muted-foreground"><LockKeyhole className="h-4 w-4 text-primary" /> Audio is not saved</div>
             </CardContent>
           </Card>
         </div>

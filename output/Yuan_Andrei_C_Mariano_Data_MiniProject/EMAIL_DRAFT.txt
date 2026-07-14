@@ -1,0 +1,12 @@
+To: careers@dytechlab.com
+Subject: Yuan Andrei C. Mariano_Data MiniProject_[DEADLINE_YYYYMMDD]
+
+Dear Hiring Team,
+
+Please find attached my submission for the Data MiniProject.
+
+The archive contains the Python command-line downloader, configuration and logging
+files, recovery design notes, usage documentation, and automated tests.
+
+Regards,
+Yuan Andrei C. Mariano

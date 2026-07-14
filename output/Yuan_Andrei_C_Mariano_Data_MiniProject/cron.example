@@ -1,0 +1,3 @@
+# Example only. Assumes the machine uses Asia/Singapore local time.
+# Run after expected SGX publication, Monday through Friday.
+30 16 * * 1-5 cd /opt/sgx-data-downloader && /opt/sgx-data-downloader/.venv/bin/sgx-download sync

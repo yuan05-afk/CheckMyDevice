@@ -1,181 +1,111 @@
 import { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
-import { Battery as BatteryIcon, BatteryCharging, BatteryWarning, Zap } from 'lucide-react';
+import { Battery as BatteryIcon, BatteryCharging, BatteryWarning, Clock3, PlugZap, Zap } from 'lucide-react';
 import { useTestContext } from '@/context/TestContext';
 import { Card, CardContent } from '@/components/ui/card';
 import { TestPageHeader } from '@/components/TestPageHeader';
+import { MetricTile, PanelHeading, TestStatusBadge, WaitingReadout } from '@/components/DiagnosticPrimitives';
+
+type BatteryState = { level: number; charging: boolean; chargingTime: number; dischargingTime: number };
+type BatteryManagerLike = BatteryState & { addEventListener: (name: string, listener: () => void) => void; removeEventListener: (name: string, listener: () => void) => void };
 
 export function BatteryTest() {
   const { results, setResult } = useTestContext();
-  const [batteryState, setBatteryState] = useState<any>(null);
+  const [batteryState, setBatteryState] = useState<BatteryState | null>(null);
   const [supported, setSupported] = useState<boolean | null>(null);
 
   useEffect(() => {
-    let battery: any;
-
+    let battery: BatteryManagerLike | undefined;
     const updateBatteryInfo = () => {
-      if (battery) {
-        setBatteryState({
-          level: battery.level,
-          charging: battery.charging,
-          chargingTime: battery.chargingTime,
-          dischargingTime: battery.dischargingTime,
-        });
-      }
+      if (battery) setBatteryState({ level: battery.level, charging: battery.charging, chargingTime: battery.chargingTime, dischargingTime: battery.dischargingTime });
     };
-
-    if ('getBattery' in navigator) {
+    const navigatorWithBattery = navigator as Navigator & { getBattery?: () => Promise<BatteryManagerLike> };
+    if (navigatorWithBattery.getBattery) {
       setSupported(true);
-      (navigator as any).getBattery().then((b: any) => {
-        battery = b;
+      navigatorWithBattery.getBattery().then((manager) => {
+        battery = manager;
         updateBatteryInfo();
-
-        b.addEventListener('levelchange', updateBatteryInfo);
-        b.addEventListener('chargingchange', updateBatteryInfo);
-        b.addEventListener('chargingtimechange', updateBatteryInfo);
-        b.addEventListener('dischargingtimechange', updateBatteryInfo);
-        
+        ['levelchange', 'chargingchange', 'chargingtimechange', 'dischargingtimechange'].forEach((event) => manager.addEventListener(event, updateBatteryInfo));
         setResult('battery', 'working');
       });
     } else {
       setSupported(false);
       setResult('battery', 'unsupported');
     }
-
-    return () => {
-      if (battery) {
-        battery.removeEventListener('levelchange', updateBatteryInfo);
-        battery.removeEventListener('chargingchange', updateBatteryInfo);
-        battery.removeEventListener('chargingtimechange', updateBatteryInfo);
-        battery.removeEventListener('dischargingtimechange', updateBatteryInfo);
-      }
-    };
+    return () => { if (battery) ['levelchange', 'chargingchange', 'chargingtimechange', 'dischargingtimechange'].forEach((event) => battery?.removeEventListener(event, updateBatteryInfo)); };
   }, [setResult]);
 
   const formatTime = (seconds: number) => {
-    if (!isFinite(seconds)) return 'Calculating...';
-    if (seconds === 0) return '0 minutes';
-    
+    if (!Number.isFinite(seconds)) return 'Calculating';
+    if (seconds === 0) return '0 min';
     const hours = Math.floor(seconds / 3600);
-    const mins = Math.floor((seconds % 3600) / 60);
-    
-    if (hours > 0) return `${hours} hr ${mins} min`;
-    return `${mins} min`;
+    const minutes = Math.floor((seconds % 3600) / 60);
+    return hours > 0 ? `${hours}h ${minutes}m` : `${minutes} min`;
   };
 
+  const percent = batteryState ? Math.round(batteryState.level * 100) : 0;
+  const estimate = batteryState ? formatTime(batteryState.charging ? batteryState.chargingTime : batteryState.dischargingTime) : '—';
+  const levelColor = percent <= 20 ? 'bg-status-warn' : batteryState?.charging ? 'bg-status-pass' : 'bg-primary';
+
   return (
-    <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="flex flex-col max-w-4xl mx-auto w-full min-h-[calc(100dvh-12rem)] justify-center">
-      <TestPageHeader
-        testId="T-07"
-        title="Battery"
-        description="Check battery health, level, and charging status."
-        onMarkIssue={() => setResult('battery', 'issue')}
-        onMarkWorking={() => setResult('battery', 'working')}
-        showActions={supported !== false}
-      />
+    <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="test-page mx-auto flex w-full max-w-5xl flex-col">
+      <TestPageHeader testId="T-07" title="Battery" description="Monitor charge level, power source, and remaining time in real time." onMarkIssue={() => setResult('battery', 'issue')} onMarkWorking={() => setResult('battery', 'working')} showActions={supported !== false} />
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <Card className="flex flex-col justify-center shadow-none border-border/60 bg-card">
-          <CardContent className="p-10 flex flex-col items-center justify-center gap-8">
-            {supported === false ? (
-              <div className="text-center flex flex-col items-center gap-4 py-8">
-                <div className="w-16 h-16 bg-primary/20 rounded-full flex items-center justify-center text-primary">
-                  <BatteryWarning className="w-8 h-8" />
+      <div className="grid grid-cols-1 gap-5 lg:grid-cols-[minmax(0,1fr)_18rem]">
+        <Card className="instrument-panel">
+          <CardContent className="p-5 sm:p-6">
+            <PanelHeading label="Live power" description="Readings update automatically when charging state changes." trailing={<TestStatusBadge status={results.battery} />} className="mb-5" />
+            <div className="live-readout relative flex min-h-[340px] items-center justify-center overflow-hidden p-6">
+              {supported === false ? (
+                <div className="relative z-10 flex max-w-md flex-col items-center gap-5 text-center">
+                  <div className="test-hero-icon border-status-idle/25 bg-status-idle/10 text-status-idle"><BatteryWarning className="h-8 w-8" /></div>
+                  <div><h3 className="font-display text-lg font-bold">Battery API unavailable</h3><p className="mt-2 text-sm leading-relaxed text-muted-foreground">This browser does not expose live battery data. Other diagnostics remain available.</p></div>
                 </div>
-                <div>
-                  <h3 className="font-bold text-lg mb-2">Not Supported</h3>
-                  <p className="text-muted-foreground font-medium max-w-xs text-sm mx-auto">
-                    The Battery Status API is not supported on this browser or device (e.g. Firefox, Safari, iOS).
-                  </p>
-                </div>
-              </div>
-            ) : batteryState ? (
-              <>
-                  <div className="w-64">
-                    <div className="relative h-40 rounded-t-xl border-[6px] border-foreground bg-background p-4 shadow-inner">
-                      <span className="absolute top-2 left-1/2 h-1 w-12 -translate-x-1/2 rounded-full bg-foreground/20" aria-hidden="true" />
-                      <div className="flex h-full items-end overflow-hidden rounded-md border border-border bg-secondary/60 p-2">
-                        <div
-                          className={`h-full rounded-sm transition-all duration-1000 ease-out flex items-center justify-center relative overflow-hidden ${
-                            batteryState.charging ? 'bg-status-pass' :
-                            batteryState.level > 0.2 ? 'bg-primary' : 'bg-status-warn'
-                          }`}
-                          style={{ width: `${Math.max(5, batteryState.level * 100)}%` }}
-                        >
-                          {batteryState.charging && (
-                            <Zap className="w-7 h-7 text-white/80 absolute animate-pulse" />
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                    <div className="mx-auto h-3 w-[18rem] rounded-b-xl bg-foreground/90" aria-hidden="true" />
-                    <div className="mx-auto h-1 w-16 rounded-b bg-foreground/40" aria-hidden="true" />
+              ) : batteryState ? (
+                <div className="relative z-10 w-full max-w-xl">
+                  <div className="flex flex-col items-center text-center">
+                    <div className={`mb-4 flex h-16 w-16 items-center justify-center rounded-full ${batteryState.charging ? 'bg-status-pass/12 text-status-pass' : 'bg-primary/10 text-primary'}`}>{batteryState.charging ? <BatteryCharging className="h-8 w-8" /> : <BatteryIcon className="h-8 w-8" />}</div>
+                    <span className="spec-item">Current charge</span>
+                    <div className="readout-value mt-2 text-7xl tracking-[-0.07em]">{percent}<span className="ml-1 text-2xl text-muted-foreground">%</span></div>
+                    <p className="mt-2 flex items-center gap-2 text-sm font-semibold text-muted-foreground">{batteryState.charging ? <><PlugZap className="h-4 w-4 text-status-pass" /> Connected to AC power</> : <><BatteryIcon className="h-4 w-4" /> Running on battery</>}</p>
                   </div>
-
-                <div className="text-center">
-                  <div className="text-6xl font-black tracking-tight mb-2 font-mono">
-                    {Math.round(batteryState.level * 100)}%
-                  </div>
-                  <div className="flex items-center justify-center gap-2 text-muted-foreground font-semibold">
-                    {batteryState.charging ? (
-                      <><BatteryCharging className="w-5 h-5 text-status-pass" /> Plugged In</>
-                    ) : (
-                      <><BatteryIcon className="w-5 h-5" /> On Battery</>
-                    )}
+                  <div className="mt-8 rounded-xl border border-border/80 bg-card/70 p-3 shadow-sm">
+                    <div className="relative h-12 overflow-hidden rounded-md bg-secondary"><div className={`h-full rounded-md transition-[width] duration-700 ${levelColor}`} style={{ width: `${Math.max(3, percent)}%` }} />{batteryState.charging && <Zap className="absolute left-1/2 top-1/2 h-5 w-5 -translate-x-1/2 -translate-y-1/2 text-white" />}</div>
                   </div>
                 </div>
-              </>
-            ) : (
-              <div className="animate-pulse flex flex-col items-center gap-4 py-16">
-                <div className="h-40 w-64 rounded-t-xl bg-secondary" />
-                <div className="h-3 w-72 rounded-b-xl bg-secondary" />
-              </div>
-            )}
+              ) : <WaitingReadout title="Reading battery" detail="Waiting for browser telemetry" />}
+            </div>
+            <div className="mt-5 grid grid-cols-3 gap-3">
+              <MetricTile label="Level" value={batteryState ? `${percent}%` : '—'} accent={Boolean(batteryState)} />
+              <MetricTile label="Source" value={batteryState ? batteryState.charging ? 'AC' : 'Battery' : '—'} />
+              <MetricTile label="Estimate" value={estimate} />
+            </div>
           </CardContent>
         </Card>
 
-        <div className="flex flex-col gap-6">
-          <Card className="shadow-none border-border/60">
-            <CardContent className="p-6">
-              <h3 className="font-semibold text-sm uppercase tracking-wider text-muted-foreground mb-5">Diagnostics</h3>
+        <div className="flex flex-col gap-5">
+          <Card className="instrument-panel">
+            <CardContent className="p-5">
+              <PanelHeading label="Power telemetry" description="Live browser readings" className="mb-5" />
               {batteryState ? (
-                <div className="space-y-4">
-                  <div className="flex justify-between items-center pb-4 border-b border-border/50">
-                    <span className="text-muted-foreground font-medium">Current Level</span>
-                    <span className="font-bold text-lg">{Math.round(batteryState.level * 100)}%</span>
-                  </div>
-                  <div className="flex justify-between items-center pb-4 border-b border-border/50">
-                    <span className="text-muted-foreground font-medium">Power Source</span>
-                    <span className="font-bold text-lg">{batteryState.charging ? 'AC Power' : 'Battery'}</span>
-                  </div>
-                  
-                  {batteryState.charging && (
-                    <div className="flex justify-between items-center pb-4 border-b border-border/50">
-                      <span className="text-muted-foreground font-medium">Time until full</span>
-                      <span className="font-bold text-lg">{formatTime(batteryState.chargingTime)}</span>
-                    </div>
-                  )}
-                  
-                  {!batteryState.charging && (
-                    <div className="flex justify-between items-center pb-4 border-b border-border/50">
-                      <span className="text-muted-foreground font-medium">Time remaining</span>
-                      <span className="font-bold text-lg">{formatTime(batteryState.dischargingTime)}</span>
-                    </div>
-                  )}
-                  
-                  <div className="mt-6 text-sm font-semibold text-primary bg-primary/10 p-4 rounded-xl border border-primary/20">
-                    Unplug or plug in your device to see the status update in real-time.
-                  </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <MetricTile label="Charge" value={`${percent}%`} accent />
+                  <MetricTile label="State" value={batteryState.charging ? 'Charging' : 'Draining'} />
+                  <MetricTile label={batteryState.charging ? 'Until full' : 'Remaining'} value={estimate} />
+                  <MetricTile label="API" value="Active" detail="Live updates" />
                 </div>
-              ) : supported === false ? (
-                <p className="text-sm font-medium text-muted-foreground">
-                  Diagnostic data unavailable.
-                </p>
-              ) : (
-                <p className="text-sm font-medium text-muted-foreground">Loading...</p>
-              )}
+              ) : <div className="live-readout flex min-h-32 items-center justify-center p-4"><WaitingReadout title={supported === false ? 'Unsupported' : 'Loading'} detail={supported === false ? 'No battery telemetry' : 'Fetching power state'} /></div>}
             </CardContent>
           </Card>
+
+          <Card className="instrument-panel">
+            <CardContent className="p-5">
+              <PanelHeading label="Power event" className="mb-4" />
+              <div className="flex items-start gap-3 rounded-lg border border-primary/15 bg-primary/6 p-4"><Clock3 className="mt-0.5 h-4 w-4 shrink-0 text-primary" /><p className="text-xs leading-relaxed text-muted-foreground">Plug in or unplug the device to verify that source and time estimates update instantly.</p></div>
+            </CardContent>
+          </Card>
+
+          <Card className="instrument-panel"><CardContent className="flex items-center justify-between p-5"><span className="panel-label">Result</span><TestStatusBadge status={results.battery} /></CardContent></Card>
         </div>
       </div>
     </motion.div>

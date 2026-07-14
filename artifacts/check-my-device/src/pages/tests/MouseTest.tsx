@@ -1,6 +1,6 @@
 import { useEffect, useState, useRef } from 'react';
 import { motion } from 'framer-motion';
-import { MousePointer2, Check } from 'lucide-react';
+import { Activity, Check } from 'lucide-react';
 import { useTestContext } from '@/context/TestContext';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -60,8 +60,8 @@ export function MouseTest() {
         const p = points[i];
         ctx.beginPath();
         ctx.arc(p.x, p.y, 4, 0, Math.PI * 2);
-        // Map to primary color hsl(243, 75%, 59%) roughly
-        ctx.fillStyle = `rgba(79, 70, 229, ${p.alpha})`; 
+        const primary = getComputedStyle(document.documentElement).getPropertyValue('--primary').trim();
+        ctx.fillStyle = `hsl(${primary} / ${p.alpha})`;
         ctx.fill();
         p.alpha -= 0.02; // fade out
       }
@@ -130,7 +130,7 @@ export function MouseTest() {
   const handleMarkIssue = () => setResult('mouse', 'issue');
 
   return (
-    <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="flex flex-col w-full">
+    <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="test-page mx-auto flex w-full max-w-5xl flex-col">
       <TestPageHeader
         testId="T-02"
         title="Mouse & Trackpad"
@@ -139,21 +139,21 @@ export function MouseTest() {
         onMarkWorking={handleMarkWorking}
       />
 
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6 h-[500px]">
-        <Card className="md:col-span-3 flex flex-col overflow-hidden relative shadow-none border-border/60">
-          <div className="absolute top-4 left-4 z-10 pointer-events-none">
-            <h3 className="font-semibold text-sm uppercase tracking-wider text-muted-foreground">Interactive Area</h3>
+      <div className="grid min-h-[520px] grid-cols-1 gap-5 lg:grid-cols-[minmax(0,1fr)_18rem]">
+        <Card className="relative flex min-h-[420px] flex-col overflow-hidden instrument-panel">
+          <div className="absolute left-5 top-5 z-10 rounded-lg border border-border/70 bg-card/85 px-3 py-2 shadow-sm backdrop-blur-md pointer-events-none">
+            <h3 className="panel-label">Interactive Area</h3>
           </div>
           <canvas 
             ref={canvasRef} 
-            className="flex-1 w-full bg-card cursor-crosshair rounded-xl touch-none"
+            className="flex-1 w-full cursor-crosshair touch-none bg-[radial-gradient(circle_at_center,hsl(var(--primary)/0.08),transparent_58%)]"
           />
         </Card>
 
         <div className="flex flex-col gap-6">
-          <Card className="shadow-none border-border/60">
+          <Card className="instrument-panel">
             <CardContent className="p-5 flex flex-col gap-3">
-              <h3 className="font-semibold text-sm uppercase text-muted-foreground tracking-wider mb-2">Detected Actions</h3>
+              <h3 className="panel-label mb-2">Detected Actions</h3>
               
               <div className="flex items-center justify-between text-sm font-semibold">
                 <span className="text-foreground">Movement</span>
@@ -178,17 +178,17 @@ export function MouseTest() {
             </CardContent>
           </Card>
 
-          <Card className="flex-1 overflow-hidden flex flex-col shadow-none border-border/60">
+          <Card className="flex-1 overflow-hidden flex flex-col instrument-panel">
             <CardContent className="p-0 flex-1 flex flex-col">
               <div className="p-5 pb-3">
-                <h3 className="font-semibold text-sm uppercase text-muted-foreground tracking-wider">Event Log</h3>
+                <h3 className="panel-label">Event Log</h3>
               </div>
-              <div className="flex-1 overflow-y-auto flex flex-col gap-px bg-[#0D0D0D] p-4 text-xs font-mono text-emerald-400 m-2 rounded-xl shadow-inner border border-white/5">
-                {logs.length === 0 && <span className="text-emerald-400/40 italic flex h-full items-center justify-center">Waiting for events...</span>}
+              <div className="live-readout m-2 flex flex-1 flex-col gap-1 overflow-y-auto p-4 font-mono text-xs text-primary">
+                {logs.length === 0 && <span className="flex h-full flex-col items-center justify-center gap-2 text-muted-foreground"><Activity className="h-5 w-5 text-primary/55" /> Waiting for events</span>}
                 {logs.map((log) => (
                   <div key={log.id} className="animate-in fade-in slide-in-from-left-2 py-1">
                     <span className="opacity-50 mr-3">[{log.timestamp.toISOString().substring(11, 23)}]</span>
-                    <span className="text-white font-bold mr-2">{log.type}</span>
+                    <span className="mr-2 font-semibold text-foreground">{log.type}</span>
                     <span className="opacity-80">{log.details}</span>
                   </div>
                 ))}
