@@ -57,13 +57,13 @@ export function NetworkTest() {
   const signalBars = connectionInfo?.effectiveType === '4g' ? 4 : connectionInfo?.effectiveType === '3g' ? 3 : connectionInfo?.effectiveType === '2g' ? 2 : isOnline ? 3 : 0;
 
   return (
-    <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="test-page mx-auto flex w-full max-w-5xl flex-col">
+    <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="test-page mx-auto flex w-full max-w-[90rem] flex-col">
       <TestPageHeader testId="T-08" title="Network" description="Inspect connection state, link telemetry, latency, and download throughput." onMarkIssue={() => setResult('network', 'issue')} onMarkWorking={() => setResult('network', 'working')} />
 
-      <div className="grid grid-cols-1 gap-5 lg:grid-cols-[minmax(0,1fr)_18rem]">
-        <Card className="instrument-panel">
+      <div className="flex flex-col gap-5">
+        <Card className="order-2 instrument-panel">
           <CardContent className="p-5 sm:p-6">
-            <PanelHeading label="Connection monitor" description="Browser-reported status and link quality." trailing={<TestStatusBadge status={results.network} />} className="mb-5" />
+            <PanelHeading label="Connection monitor" description="Browser-reported status and link quality." className="mb-5" />
             <div className="live-readout relative flex min-h-[340px] items-center justify-center overflow-hidden p-6">
               <div className="relative z-10 flex w-full max-w-xl flex-col items-center text-center">
                 <div className={`flex h-20 w-20 items-center justify-center rounded-full border ${isOnline ? 'border-status-pass/20 bg-status-pass/10 text-status-pass' : 'border-status-warn/20 bg-status-warn/10 text-status-warn'}`}>{isOnline ? <Wifi className="h-9 w-9" /> : <WifiOff className="h-9 w-9" />}</div>
@@ -83,7 +83,7 @@ export function NetworkTest() {
           </CardContent>
         </Card>
 
-        <div className="flex flex-col gap-5">
+        <div className="order-1 grid items-start gap-4 md:grid-cols-3">
           <Card className="instrument-panel">
             <CardContent className="p-5">
               <PanelHeading label="Speed test" description="5 MB download sample" className="mb-5" />

@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+﻿import { useEffect, useRef, useState } from 'react';
 import { motion } from 'framer-motion';
 import { LockKeyhole, Mic as MicIcon, ShieldAlert, Waves } from 'lucide-react';
 import { useTestContext } from '@/context/TestContext';
@@ -108,7 +108,7 @@ export function MicrophoneTest() {
   }, []);
 
   return (
-    <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="test-page mx-auto flex w-full max-w-5xl flex-col">
+    <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="test-page mx-auto flex w-full max-w-[90rem] flex-col">
       <TestPageHeader
         testId="T-04"
         title="Microphone"
@@ -117,10 +117,10 @@ export function MicrophoneTest() {
         onMarkWorking={() => setResult('microphone', 'working')}
       />
 
-      <div className="grid grid-cols-1 gap-5 lg:grid-cols-[minmax(0,1fr)_18rem]">
-        <Card className="instrument-panel">
+      <div className="flex flex-col gap-5">
+        <Card className="order-2 instrument-panel">
           <CardContent className="p-5 sm:p-6">
-            <PanelHeading label="Live waveform" description="Sound is analyzed in real time and never leaves this tab." trailing={<TestStatusBadge status={results.microphone} />} className="mb-5" />
+            <PanelHeading label="Live waveform" description="Sound is analyzed in real time and never leaves this tab." className="mb-5" />
             <div className="live-readout relative flex min-h-[350px] items-center justify-center overflow-hidden">
               {!stream && !error && (
                 <div className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-5 bg-card/92 px-6 text-center backdrop-blur-md">
@@ -147,7 +147,7 @@ export function MicrophoneTest() {
           </CardContent>
         </Card>
 
-        <div className="flex flex-col gap-5">
+        <div className="order-1 grid items-start gap-4 md:grid-cols-3">
           <Card className="instrument-panel">
             <CardContent className="p-5">
               <PanelHeading label="Input level" description="Live signal intensity" className="mb-5" />
@@ -165,6 +165,13 @@ export function MicrophoneTest() {
               <PanelHeading label="Signal check" className="mb-4" />
               {stream ? <div className="space-y-3"><div className="flex justify-between text-sm"><span className="text-muted-foreground">Response</span><span className="readout-value text-xs">{peak > 3 ? 'Detected' : 'Waiting'}</span></div><div className="flex justify-between text-sm"><span className="text-muted-foreground">Processing</span><span className="readout-value text-xs">Local</span></div></div> : <div className="live-readout flex min-h-28 items-center justify-center p-4"><WaitingReadout title="Awaiting input" detail="Start the microphone test" /></div>}
               <div className="mt-4 flex items-center gap-2 border-t border-border/70 pt-4 text-xs text-muted-foreground"><LockKeyhole className="h-4 w-4 text-primary" /> Audio is not saved</div>
+            </CardContent>
+          </Card>
+
+          <Card className="instrument-panel">
+            <CardContent className="p-5">
+              <div className="flex items-center justify-between"><span className="panel-label">Result</span><TestStatusBadge status={results.microphone} /></div>
+              <div className="mt-4 grid grid-cols-2 gap-3"><MetricTile label="Peak" value={`${peak}%`} accent={peak > 3} /><MetricTile label="State" value={stream ? 'Listening' : 'Idle'} /></div>
             </CardContent>
           </Card>
         </div>

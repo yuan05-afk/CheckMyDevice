@@ -48,13 +48,13 @@ export function BatteryTest() {
   const levelColor = percent <= 20 ? 'bg-status-warn' : batteryState?.charging ? 'bg-status-pass' : 'bg-primary';
 
   return (
-    <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="test-page mx-auto flex w-full max-w-5xl flex-col">
+    <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="test-page mx-auto flex w-full max-w-[90rem] flex-col">
       <TestPageHeader testId="T-07" title="Battery" description="Monitor charge level, power source, and remaining time in real time." onMarkIssue={() => setResult('battery', 'issue')} onMarkWorking={() => setResult('battery', 'working')} showActions={supported !== false} />
 
-      <div className="grid grid-cols-1 gap-5 lg:grid-cols-[minmax(0,1fr)_18rem]">
-        <Card className="instrument-panel">
+      <div className="flex flex-col gap-5">
+        <Card className="order-2 instrument-panel">
           <CardContent className="p-5 sm:p-6">
-            <PanelHeading label="Live power" description="Readings update automatically when charging state changes." trailing={<TestStatusBadge status={results.battery} />} className="mb-5" />
+            <PanelHeading label="Live power" description="Readings update automatically when charging state changes." className="mb-5" />
             <div className="live-readout relative flex min-h-[340px] items-center justify-center overflow-hidden p-6">
               {supported === false ? (
                 <div className="relative z-10 flex max-w-md flex-col items-center gap-5 text-center">
@@ -83,7 +83,7 @@ export function BatteryTest() {
           </CardContent>
         </Card>
 
-        <div className="flex flex-col gap-5">
+        <div className="order-1 grid items-start gap-4 md:grid-cols-3">
           <Card className="instrument-panel">
             <CardContent className="p-5">
               <PanelHeading label="Power telemetry" description="Live browser readings" className="mb-5" />

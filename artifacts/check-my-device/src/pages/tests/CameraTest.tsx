@@ -59,7 +59,7 @@ export function CameraTest() {
   };
 
   return (
-    <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="test-page mx-auto flex w-full max-w-5xl flex-col">
+    <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="test-page mx-auto flex w-full max-w-[90rem] flex-col">
       <TestPageHeader
         testId="T-03"
         title="Camera"
@@ -68,10 +68,10 @@ export function CameraTest() {
         onMarkWorking={() => setResult('camera', 'working')}
       />
 
-      <div className="grid grid-cols-1 gap-5 lg:grid-cols-[minmax(0,1fr)_18rem]">
-        <Card className="instrument-panel">
+      <div className="flex flex-col gap-5">
+        <Card className="order-2 instrument-panel">
           <CardContent className="p-5 sm:p-6">
-            <PanelHeading label="Live camera" description="The preview stays on this device and is never uploaded." trailing={<TestStatusBadge status={results.camera} />} className="mb-5" />
+            <PanelHeading label="Live camera" description="The preview stays on this device and is never uploaded." className="mb-5" />
             <div className="live-readout relative flex aspect-video min-h-[320px] items-center justify-center overflow-hidden">
               {!stream && !error && (
                 <div className="relative z-10 flex max-w-md flex-col items-center gap-5 px-6 text-center">
@@ -108,7 +108,7 @@ export function CameraTest() {
           </CardContent>
         </Card>
 
-        <div className="flex flex-col gap-5">
+        <div className="order-1 grid items-start gap-4 md:grid-cols-3">
           <Card className="instrument-panel">
             <CardContent className="p-5">
               <PanelHeading label="Device source" description="Choose the camera used for this preview." className="mb-5" />
@@ -135,6 +135,13 @@ export function CameraTest() {
                 ) : <WaitingReadout title="No stream" detail="Camera is currently off" />}
               </div>
               <div className="mt-4 flex items-center gap-2 text-xs text-muted-foreground"><LockKeyhole className="h-4 w-4 text-primary" /> Nothing recorded or transmitted</div>
+            </CardContent>
+          </Card>
+
+          <Card className="instrument-panel">
+            <CardContent className="p-5">
+              <div className="flex items-center justify-between"><span className="panel-label">Result</span><TestStatusBadge status={results.camera} /></div>
+              <div className="mt-4 grid grid-cols-2 gap-3"><MetricTile label="Resolution" value={videoInfo ? `${videoInfo.width}×${videoInfo.height}` : '—'} accent={Boolean(videoInfo)} /><MetricTile label="Sources" value={devices.length || '—'} /></div>
             </CardContent>
           </Card>
         </div>

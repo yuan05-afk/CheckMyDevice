@@ -1,9 +1,8 @@
-﻿import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { motion } from 'framer-motion';
-import { Activity, Info, Keyboard, Maximize2, Minimize2, ShieldCheck } from 'lucide-react';
+import { Activity, Info, Keyboard } from 'lucide-react';
 import { useTestContext } from '@/context/TestContext';
 import { Card, CardContent } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
 import { TestPageHeader } from '@/components/TestPageHeader';
 import { TestStatusBadge } from '@/components/DiagnosticPrimitives';
 
@@ -15,7 +14,7 @@ type KeyDefinition = {
 
 type MainSlot = KeyDefinition | { spacer: true; span: number };
 type PositionedKey = KeyDefinition & { column: number; row: number; columnSpan?: number; rowSpan?: number };
-type KeyboardAccess = { lock?: (codes?: string[]) => Promise<void>; unlock?: () => void };
+type RecentKey = { label: string; code: string; timestamp: number };
 
 const key = (code: string, label: string, span = 2): KeyDefinition => ({ code, label, span });
 const spacer = (span: number): MainSlot => ({ spacer: true, span });
@@ -26,7 +25,7 @@ const mainRows: MainSlot[][] = [
   [key('Tab', 'Tab', 3), key('KeyQ', 'Q'), key('KeyW', 'W'), key('KeyE', 'E'), key('KeyR', 'R'), key('KeyT', 'T'), key('KeyY', 'Y'), key('KeyU', 'U'), key('KeyI', 'I'), key('KeyO', 'O'), key('KeyP', 'P'), key('BracketLeft', '['), key('BracketRight', ']'), key('Backslash', '\\', 3)],
   [key('CapsLock', 'Caps', 4), key('KeyA', 'A'), key('KeyS', 'S'), key('KeyD', 'D'), key('KeyF', 'F'), key('KeyG', 'G'), key('KeyH', 'H'), key('KeyJ', 'J'), key('KeyK', 'K'), key('KeyL', 'L'), key('Semicolon', ';'), key('Quote', "'"), key('Enter', 'Enter', 4)],
   [key('ShiftLeft', 'Shift', 5), key('KeyZ', 'Z'), key('KeyX', 'X'), key('KeyC', 'C'), key('KeyV', 'V'), key('KeyB', 'B'), key('KeyN', 'N'), key('KeyM', 'M'), key('Comma', ','), key('Period', '.'), key('Slash', '/'), key('ShiftRight', 'Shift', 5)],
-  [key('ControlLeft', 'Ctrl', 3), key('Fn', 'Fn', 2), key('MetaLeft', 'Win', 2), key('AltLeft', 'Alt', 3), key('Space', 'Space', 10), key('AltRight', 'Alt', 3), key('MetaRight', 'Win', 2), key('ContextMenu', 'Menu', 2), key('ControlRight', 'Ctrl', 3)],
+  [key('ControlLeft', 'Ctrl', 3), key('MetaLeft', 'Win', 3), key('AltLeft', 'Alt', 3), key('Space', 'Space', 11), key('AltRight', 'Alt', 3), key('MetaRight', 'Win', 3), key('ContextMenu', 'Menu', 2), key('ControlRight', 'Ctrl', 2)],
 ];
 
 const navigationRows: Array<Array<KeyDefinition | null>> = [
@@ -66,39 +65,13 @@ const allKeys = [
 
 const testableCodes = new Set(allKeys.map(({ code }) => code));
 const systemHandledCodes = new Set(['PrintScreen', 'MetaLeft', 'MetaRight', 'ContextMenu', 'Pause']);
-const modifierCodes = new Set(['ShiftLeft', 'ShiftRight', 'ControlLeft', 'ControlRight', 'AltLeft', 'AltRight', 'MetaLeft', 'MetaRight', 'Fn']);
-const protectedCodes = new Set([...systemHandledCodes, 'Fn']);
-const fnInferenceCodes = new Set([
-  'AudioVolumeUp', 'AudioVolumeDown', 'AudioVolumeMute',
-  'BrightnessUp', 'BrightnessDown', 'MediaTrackNext', 'MediaTrackPrevious',
-  'MediaPlayPause', 'MediaStop', 'LaunchApplication1', 'LaunchApplication2',
-  'KeyboardBacklightUp', 'KeyboardBacklightDown', 'KeyboardBacklightToggle',
-]);
-
-const LOCKED_KEY_CODES = [
-  'PrintScreen', 'ScrollLock', 'Pause', 'MetaLeft', 'MetaRight', 'ContextMenu',
-  'AltLeft', 'AltRight', 'ControlLeft', 'ControlRight',
-  'F1', 'F2', 'F3', 'F4', 'F5', 'F6', 'F7', 'F8', 'F9', 'F10', 'F11', 'F12',
-  'Escape', 'Tab',
-];
+const modifierCodes = new Set(['ShiftLeft', 'ShiftRight', 'ControlLeft', 'ControlRight', 'AltLeft', 'AltRight', 'MetaLeft', 'MetaRight']);
 
 function resolveLayoutCode(event: KeyboardEvent): string | null {
-  if (event.code === 'Fn' || event.key === 'Fn' || event.keyCode === 119) return 'Fn';
-  if (testableCodes.has(event.code)) return event.code;
-  return null;
-}
-
-function getKeyboardAccess() {
-  return (navigator as Navigator & { keyboard?: KeyboardAccess }).keyboard;
+  return testableCodes.has(event.code) ? event.code : null;
 }
 
 function blockBrowserAction(event: KeyboardEvent) {
-  if (protectedCodes.has(event.code) || event.code === 'Fn' || event.key === 'Fn') {
-    event.preventDefault();
-    event.stopPropagation();
-    event.stopImmediatePropagation();
-    return;
-  }
   if (event.cancelable) {
     event.preventDefault();
     event.stopPropagation();
@@ -117,12 +90,11 @@ function KeyboardKey({
   style?: React.CSSProperties;
 }) {
   const systemHandled = systemHandledCodes.has(definition.code);
-  const fnKey = definition.code === 'Fn';
   return (
     <div
-      className={`keyboard-key keycap ${tested ? 'is-tested' : ''} ${held ? 'is-held' : ''} ${systemHandled ? 'is-system-key' : ''} ${fnKey ? 'is-fn-key' : ''}`}
+      className={`keyboard-key keycap ${tested ? 'is-tested' : ''} ${held ? 'is-held' : ''} ${systemHandled ? 'is-system-key' : ''}`}
       style={style}
-      title={`${definition.label} / ${definition.code}${systemHandled ? ' / May be reserved by the operating system' : ''}${fnKey ? ' / Hardware-level on many laptops; may not always register' : ''}`}
+      title={`${definition.label} / ${definition.code}${systemHandled ? ' / May be reserved by the operating system' : ''}`}
       data-key-code={definition.code}
       data-system-key={systemHandled || undefined}
     >
@@ -135,63 +107,22 @@ export function KeyboardTest() {
   const { results, setResult } = useTestContext();
   const [testedCodes, setTestedCodes] = useState<Set<string>>(new Set());
   const [heldCodes, setHeldCodes] = useState<Set<string>>(new Set());
-  const [lastEvent, setLastEvent] = useState<{ key: string; code: string; blocked: boolean; repeated: boolean } | null>(null);
   const [pressCount, setPressCount] = useState(0);
-  const [testModeActive, setTestModeActive] = useState(false);
-  const [keyboardLockActive, setKeyboardLockActive] = useState(false);
-  const [testModeMessage, setTestModeMessage] = useState('Protected mode starts automatically on your first key press.');
-  const protectionAttemptedRef = useRef(false);
-
-  const enableProtection = useCallback(async () => {
-    if (protectionAttemptedRef.current) return;
-    protectionAttemptedRef.current = true;
-
-    try {
-      if (!document.fullscreenElement) {
-        await document.documentElement.requestFullscreen({ navigationUI: 'hide' });
-      }
-
-      const keyboardAccess = getKeyboardAccess();
-      if (keyboardAccess?.lock) {
-        await keyboardAccess.lock(LOCKED_KEY_CODES);
-        setKeyboardLockActive(true);
-        setTestModeMessage('Protected mode is active. Win, Print Screen, and browser shortcuts are suppressed when possible. Hold Esc to exit fullscreen.');
-      } else {
-        setKeyboardLockActive(false);
-        setTestModeMessage('Fullscreen is active. This browser does not support Keyboard Lock — some OS shortcuts may still fire.');
-      }
-      setTestModeActive(true);
-    } catch {
-      protectionAttemptedRef.current = false;
-      setKeyboardLockActive(false);
-      setTestModeMessage('Protected mode was unavailable. Click Start Test Mode or tap the keyboard to retry.');
-      setTestModeActive(Boolean(document.fullscreenElement));
-    }
-  }, []);
-
-  const disableProtection = useCallback(async () => {
-    getKeyboardAccess()?.unlock?.();
-    setKeyboardLockActive(false);
-    protectionAttemptedRef.current = false;
-    if (document.fullscreenElement) {
-      await document.exitFullscreen();
-    }
-    setTestModeActive(false);
-    setTestModeMessage('Protected mode ended. Press any key or click Start Test Mode to re-enable.');
-  }, []);
+  const [recentKeys, setRecentKeys] = useState<RecentKey[]>([]);
 
   const registerKeyActivity = useCallback((event: KeyboardEvent) => {
     const layoutCode = resolveLayoutCode(event);
     const displayCode = layoutCode ?? event.code;
 
-    setLastEvent({
-      key: event.key,
-      code: displayCode || 'Unavailable',
-      blocked: event.defaultPrevented || protectedCodes.has(event.code) || layoutCode === 'Fn',
-      repeated: event.repeat,
-    });
 
-    if (!event.repeat) setPressCount((previous) => previous + 1);
+    if (!event.repeat) {
+      setPressCount((previous) => previous + 1);
+      setRecentKeys((previous) => [{
+        label: event.key === ' ' ? 'Space' : event.key || displayCode || 'Unknown',
+        code: displayCode || 'Unavailable',
+        timestamp: event.timeStamp,
+      }, ...previous].slice(0, 6));
+    }
 
     if (layoutCode && modifierCodes.has(layoutCode)) {
       setHeldCodes((previous) => new Set(previous).add(layoutCode));
@@ -201,17 +132,12 @@ export function KeyboardTest() {
       setTestedCodes((previous) => new Set(previous).add(layoutCode));
     }
 
-    if (fnInferenceCodes.has(event.code)) {
-      setTestedCodes((previous) => new Set(previous).add('Fn'));
-      setHeldCodes((previous) => new Set(previous).add('Fn'));
-    }
   }, []);
 
   const handleKeyDown = useCallback((event: KeyboardEvent) => {
     blockBrowserAction(event);
-    void enableProtection();
     registerKeyActivity(event);
-  }, [enableProtection, registerKeyActivity]);
+  }, [registerKeyActivity]);
 
   const handleKeyUp = useCallback((event: KeyboardEvent) => {
     blockBrowserAction(event);
@@ -223,13 +149,7 @@ export function KeyboardTest() {
         return next;
       });
     }
-    if (fnInferenceCodes.has(event.code)) {
-      setHeldCodes((previous) => {
-        const next = new Set(previous);
-        next.delete('Fn');
-        return next;
-      });
-    }
+
   }, []);
 
   useEffect(() => {
@@ -244,47 +164,15 @@ export function KeyboardTest() {
     };
   }, [handleKeyDown, handleKeyUp]);
 
-  useEffect(() => {
-    const handleFullscreenChange = () => {
-      const active = Boolean(document.fullscreenElement);
-      setTestModeActive(active);
-      if (!active) {
-        getKeyboardAccess()?.unlock?.();
-        setKeyboardLockActive(false);
-        setTestModeMessage('Protected mode ended. Press any key or click Start Test Mode to re-enable.');
-      }
-    };
-    document.addEventListener('fullscreenchange', handleFullscreenChange);
-    return () => document.removeEventListener('fullscreenchange', handleFullscreenChange);
-  }, []);
-
-  useEffect(() => {
-    return () => {
-      getKeyboardAccess()?.unlock?.();
-      if (document.fullscreenElement) {
-        void document.exitFullscreen();
-      }
-    };
-  }, []);
-
-  const toggleTestMode = useCallback(async () => {
-    if (document.fullscreenElement) {
-      await disableProtection();
-      return;
-    }
-    protectionAttemptedRef.current = false;
-    await enableProtection();
-  }, [disableProtection, enableProtection]);
 
   const totalKeys = testableCodes.size;
   const testedCount = useMemo(() => [...testedCodes].filter((code) => testableCodes.has(code)).length, [testedCodes]);
   const progress = Math.round((testedCount / totalKeys) * 100);
   const modifierState = [
-    { label: 'Shift', active: heldCodes.has('ShiftLeft') || heldCodes.has('ShiftRight') },
-    { label: 'Ctrl', active: heldCodes.has('ControlLeft') || heldCodes.has('ControlRight') },
-    { label: 'Alt', active: heldCodes.has('AltLeft') || heldCodes.has('AltRight') },
-    { label: 'Fn', active: heldCodes.has('Fn') },
-    { label: 'System', active: heldCodes.has('MetaLeft') || heldCodes.has('MetaRight') },
+    { label: 'Shift', active: heldCodes.has('ShiftLeft') || heldCodes.has('ShiftRight'), detected: testedCodes.has('ShiftLeft') || testedCodes.has('ShiftRight') },
+    { label: 'Ctrl', active: heldCodes.has('ControlLeft') || heldCodes.has('ControlRight'), detected: testedCodes.has('ControlLeft') || testedCodes.has('ControlRight') },
+    { label: 'Alt', active: heldCodes.has('AltLeft') || heldCodes.has('AltRight'), detected: testedCodes.has('AltLeft') || testedCodes.has('AltRight') },
+    { label: 'Win / Cmd', active: heldCodes.has('MetaLeft') || heldCodes.has('MetaRight'), detected: testedCodes.has('MetaLeft') || testedCodes.has('MetaRight') },
   ];
 
   const isKeyHeld = (code: string) => heldCodes.has(code);
@@ -294,23 +182,25 @@ export function KeyboardTest() {
       <TestPageHeader
         testId="T-01"
         title="Keyboard"
-        description="Test a full-size keyboard, including navigation keys, left/right modifiers, Fn, and the numpad."
+        description="Test a full-size keyboard, including navigation keys, left/right modifiers, and the numpad."
         onMarkIssue={() => setResult('keyboard', 'issue')}
         onMarkWorking={() => setResult('keyboard', 'working')}
       />
 
-      <div className="mb-5 grid gap-4 md:grid-cols-3">
+      <div className="mb-5 grid items-start gap-4 md:grid-cols-3">
         <Card className="instrument-panel">
           <CardContent className="p-4 sm:p-5">
-            <h2 className="panel-label">Held modifiers</h2>
-            <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
+            <h2 className="panel-label">Modifier activity</h2>
+            <div className="mt-3 grid grid-cols-2 gap-2">
               {modifierState.map((modifier) => (
                 <div
                   key={modifier.label}
-                  className={`metric-tile flex items-center justify-between gap-2 p-3 ${modifier.active ? 'border-primary/40 bg-primary/5' : ''}`}
+                  className={`metric-tile flex items-center justify-between gap-2 p-3 ${modifier.active || modifier.detected ? 'border-primary/40 bg-primary/5' : ''}`}
                 >
                   <span className="font-mono text-[10px] text-muted-foreground">{modifier.label}</span>
-                  <span className={`h-2 w-2 shrink-0 rounded-full ${modifier.active ? 'bg-primary shadow-[0_0_8px_hsl(var(--primary)/.7)]' : 'bg-status-idle'}`} />
+                  <span className={`font-mono text-[9px] font-semibold ${modifier.active ? 'text-primary' : modifier.detected ? 'text-status-pass' : 'text-status-idle'}`}>
+                    {modifier.active ? 'HELD' : modifier.detected ? 'SEEN' : 'WAIT'}
+                  </span>
                 </div>
               ))}
             </div>
@@ -320,17 +210,41 @@ export function KeyboardTest() {
         <Card className="instrument-panel">
           <CardContent className="p-4 sm:p-5">
             <div className="flex items-center justify-between gap-3">
-              <h2 className="panel-label">Protected keys</h2>
-              <ShieldCheck className={`h-4 w-4 shrink-0 ${testModeActive && keyboardLockActive ? 'text-status-pass' : 'text-primary'}`} />
+              <h2 className="panel-label">Recent input</h2>
+              <span className="font-mono text-[9px] text-muted-foreground">{pressCount} {pressCount === 1 ? 'PRESS' : 'PRESSES'}</span>
             </div>
-            <p className="mt-2 text-xs leading-relaxed text-muted-foreground">
-              Win and Print Screen are blocked in protected mode so testing does not trigger screenshots or the Start menu.
-            </p>
-            <Button className="mt-3 w-full gap-2" variant={testModeActive ? 'outline' : 'default'} onClick={toggleTestMode}>
-              {testModeActive ? <Minimize2 className="h-4 w-4 shrink-0" /> : <Maximize2 className="h-4 w-4 shrink-0" />}
-              {testModeActive ? 'Exit Test Mode' : 'Start Test Mode'}
-            </Button>
-            <p className={`mt-2 font-mono text-[10px] leading-relaxed ${testModeActive ? 'text-status-pass' : 'text-muted-foreground'}`}>{testModeMessage}</p>
+            <div className="live-readout mt-3 flex min-h-24 flex-col justify-center p-4">
+              {recentKeys.length > 0 ? (
+                <div className="relative z-10 grid gap-3">
+                  <div className="flex items-end justify-between gap-4">
+                    <div className="min-w-0">
+                      <span className="spec-item mb-1 block">Latest key</span>
+                      <div className="readout-value truncate text-2xl">{recentKeys[0].label}</div>
+                    </div>
+                    <span className="shrink-0 font-mono text-[10px] text-primary">{recentKeys[0].code}</span>
+                  </div>
+                  <div className="flex min-h-8 items-center gap-2 overflow-hidden border-t border-border/70 pt-3">
+                    {recentKeys.slice(1).map((entry) => (
+                      <motion.span
+                        key={`${entry.code}-${entry.timestamp}`}
+                        initial={{ opacity: 0, scale: 0.9 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        className="keycap shrink-0 rounded-md px-2 py-1 font-mono text-[10px] text-muted-foreground"
+                        title={entry.code}
+                      >
+                        {entry.label}
+                      </motion.span>
+                    ))}
+                    {recentKeys.length === 1 && <span className="font-mono text-[9px] text-muted-foreground">CONTINUE TYPING TO BUILD HISTORY</span>}
+                  </div>
+                </div>
+              ) : (
+                <div className="relative z-10 flex items-center gap-3 text-muted-foreground">
+                  <Activity className="h-5 w-5 shrink-0 text-primary/60" />
+                  <div><p className="font-mono text-[10px] font-semibold text-foreground">AWAITING INPUT</p><p className="mt-1 text-xs">Recent physical key presses will appear here.</p></div>
+                </div>
+              )}
+            </div>
           </CardContent>
         </Card>
 
@@ -354,7 +268,7 @@ export function KeyboardTest() {
         </Card>
       </div>
 
-      <div className="grid items-start gap-5 xl:grid-cols-[minmax(0,1fr)_20rem]">
+      <div className="min-w-0">
         <Card className="instrument-panel min-w-0">
           <CardContent className="p-3 sm:p-5">
             <div className="mb-5 flex items-center justify-between gap-4">
@@ -368,11 +282,7 @@ export function KeyboardTest() {
               </div>
             </div>
 
-            <div
-              className="full-keyboard rounded-xl border border-border/70 bg-secondary/25 p-2 sm:p-3"
-              aria-label="Full-size keyboard test layout"
-              onPointerDown={() => { void enableProtection(); }}
-            >
+            <div className="full-keyboard rounded-xl border border-border/70 bg-secondary/25 p-2 sm:p-3" aria-label="Full-size keyboard test layout">
               <div className="keyboard-main-grid">
                 {mainRows.map((row, rowIndex) => (
                   <div className="keyboard-main-row" key={rowIndex}>
@@ -430,55 +340,11 @@ export function KeyboardTest() {
 
             <div className="mt-3 flex items-start gap-2 rounded-lg border border-primary/15 bg-primary/5 px-4 py-3 text-xs leading-relaxed text-muted-foreground">
               <Info className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
-              Dashed keys are reserved by the OS when protected mode is off. Fn is hardware-level on many laptops — it highlights when detected or when an Fn-layer media key fires. Protected mode suppresses Win and Print Screen inside the browser when supported.
+              This test listens to physical keyboard events; the on-screen keycaps are read-only. Dashed keys may be intercepted by the operating system. Fn is intentionally excluded because laptop firmware usually handles it without sending a browser event.
             </div>
           </CardContent>
         </Card>
 
-        <aside className="min-w-0 xl:sticky xl:top-20">
-          <Card className="instrument-panel">
-            <CardContent className="p-5">
-              <div className="mb-4 flex items-center justify-between">
-                <h2 className="panel-label">Live output</h2>
-                <span className="signal-status-dot" />
-              </div>
-              <div className="live-readout min-h-44 p-5">
-                {lastEvent ? (
-                  <div className="relative z-10 grid gap-4">
-                    <div>
-                      <span className="spec-item mb-1 block">Key value</span>
-                      <div className="readout-value truncate text-2xl">{lastEvent.key === ' ' ? 'Space' : lastEvent.key}</div>
-                    </div>
-                    <div className="border-t border-border/70 pt-4">
-                      <span className="spec-item mb-1 block">Physical code</span>
-                      <div className="readout-value truncate text-sm text-primary">{lastEvent.code || 'Unavailable'}</div>
-                    </div>
-                    <div className="grid grid-cols-2 gap-3 border-t border-border/70 pt-4">
-                      <div>
-                        <span className="spec-item mb-1 block">Presses</span>
-                        <div className="readout-value text-xl">{pressCount}</div>
-                      </div>
-                      <div>
-                        <span className="spec-item mb-1 block">Action</span>
-                        <div className={`font-mono text-[11px] font-semibold ${lastEvent.blocked ? 'text-status-pass' : 'text-status-warn'}`}>
-                          {lastEvent.repeated ? 'HELD' : lastEvent.blocked ? 'CAPTURED' : 'OS OWNED'}
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                ) : (
-                  <div className="relative z-10 flex min-h-32 flex-col items-center justify-center gap-3 text-center">
-                    <Activity className="h-6 w-6 text-primary/55" />
-                    <div>
-                      <p className="font-mono text-xs font-medium text-foreground">AWAITING INPUT</p>
-                      <p className="mt-1 text-xs text-muted-foreground">Press any key to begin</p>
-                    </div>
-                  </div>
-                )}
-              </div>
-            </CardContent>
-          </Card>
-        </aside>
       </div>
     </motion.div>
   );

@@ -877,11 +877,6 @@
   border-style: dashed;
   background: color-mix(in srgb, var(--color-status-warn) 5%, transparent);
 }
-.keyboard-key.is-fn-key:not(.is-tested) {
-  border-color: color-mix(in srgb, var(--color-status-warn) 32%, transparent);
-  border-style: dotted;
-  background: color-mix(in srgb, var(--color-status-warn) 4%, transparent);
-}
 .keyboard-key.is-held:not(.is-tested) {
   border-color: hsl(var(--primary) / 0.65);
   background: hsl(var(--primary) / 0.12);

@@ -67,6 +67,20 @@ Run package scripts as `pnpm --filter <package-name> run <script>`. Root `pnpm r
 
 ## Conventions and gotchas
 
+### Canonical diagnostic page design
+
+Use `artifacts/check-my-device/src/pages/tests/KeyboardTest.tsx` as the visual and structural reference for every hardware test page. New and updated tests should follow this composition unless the hardware API requires a clearly justified exception:
+
+- Use `TestPageHeader` for the shared test ID, title, description, and result actions.
+- Test routes use the wide diagnostic workspace supplied by `Layout`; page roots should use `test-page mx-auto flex w-full max-w-[90rem] flex-col`.
+- Place compact, genuinely useful live summaries directly below the header in `grid items-start gap-4 md:grid-cols-3`. Cards keep their natural height; never stretch neighboring cards to fill decorative space.
+- Put the primary interaction in one full-width `instrument-panel` below the summaries. Avoid narrow sidebars when they reduce the usable test surface.
+- Do not duplicate information. If a recent-input, metric, or result card already communicates a value, do not add a second "Live Output" panel for the same data.
+- Live summaries must react to the hardware being tested; avoid static guide cards that do not help users verify behavior.
+- Use `panel-label`, `live-readout`, `metric-tile`, `readout-value`, and semantic status tokens to preserve the Instrument Panel visual language.
+- Never introduce horizontal scrolling for a diagnostic control. Complex layouts must scale fluidly and remain usable at supported viewport widths.
+- Never enter fullscreen, request Keyboard Lock, or trigger intrusive permission flows automatically. Permission and immersive-mode actions require an explicit user click and must be necessary for the test.
+- Represent browser and OS limitations honestly. Do not count hardware-only controls such as laptop Fn as verified unless the browser actually emits a reliable event.
 - Keep the app client-side unless backend work is explicitly requested. Hardware APIs and permissions vary by browser, OS, device, and secure-context rules.
 - Statuses are `untested`, `working`, `issue`, and `unsupported`; they persist locally and are not synced.
 - `src/components/ui/*` is the generated shadcn/Radix layer. Regenerate components through the shadcn workflow instead of hand-editing generated files; place product composition outside it.

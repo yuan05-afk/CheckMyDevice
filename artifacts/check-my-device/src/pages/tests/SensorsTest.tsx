@@ -22,19 +22,26 @@ export function SensorsTest() {
   const touchesRef = useRef<TouchPoint[]>([]);
 
   useEffect(() => {
-    if (typeof (DeviceOrientationEvent as typeof DeviceOrientationEvent & { requestPermission?: () => Promise<string> }).requestPermission === 'function') setPermissionGranted(null);
+    const OrientationEvent = DeviceOrientationEvent as typeof DeviceOrientationEvent & { requestPermission?: () => Promise<string> };
+    if (typeof OrientationEvent.requestPermission === 'function') setPermissionGranted(null);
     else if (window.DeviceOrientationEvent) setPermissionGranted(true);
     else setPermissionGranted(false);
   }, []);
 
   const requestPermission = async () => {
     const OrientationEvent = DeviceOrientationEvent as typeof DeviceOrientationEvent & { requestPermission?: () => Promise<string> };
-    if (typeof OrientationEvent.requestPermission !== 'function') { setPermissionGranted(true); return; }
+    if (typeof OrientationEvent.requestPermission !== 'function') {
+      setPermissionGranted(true);
+      return;
+    }
     try {
       const permission = await OrientationEvent.requestPermission();
       setPermissionGranted(permission === 'granted');
       if (permission !== 'granted') setResult('sensors', 'issue');
-    } catch { setPermissionGranted(false); setResult('sensors', 'issue'); }
+    } catch {
+      setPermissionGranted(false);
+      setResult('sensors', 'issue');
+    }
   };
 
   useEffect(() => {
@@ -51,20 +58,32 @@ export function SensorsTest() {
     };
     window.addEventListener('deviceorientation', handleOrientation);
     window.addEventListener('devicemotion', handleMotion);
-    return () => { window.removeEventListener('deviceorientation', handleOrientation); window.removeEventListener('devicemotion', handleMotion); };
+    return () => {
+      window.removeEventListener('deviceorientation', handleOrientation);
+      window.removeEventListener('devicemotion', handleMotion);
+    };
   }, [permissionGranted, results.sensors, setResult]);
 
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
-    const resizeCanvas = () => { const parent = canvas.parentElement; if (parent) { canvas.width = parent.clientWidth; canvas.height = parent.clientHeight; } };
+    const resizeCanvas = () => {
+      const parent = canvas.parentElement;
+      if (parent) {
+        canvas.width = parent.clientWidth;
+        canvas.height = parent.clientHeight;
+      }
+    };
     const updateTouches = (event: TouchEvent) => {
       event.preventDefault();
       const rect = canvas.getBoundingClientRect();
       const nextTouches = Array.from(event.touches).map((touch) => ({ id: touch.identifier, x: touch.clientX - rect.left, y: touch.clientY - rect.top }));
       touchesRef.current = nextTouches;
       setTouches(nextTouches);
-      if (nextTouches.length > 0) { setTouchDetected(true); if (results.sensors === 'untested') setResult('sensors', 'working'); }
+      if (nextTouches.length > 0) {
+        setTouchDetected(true);
+        if (results.sensors === 'untested') setResult('sensors', 'working');
+      }
     };
     window.addEventListener('resize', resizeCanvas);
     resizeCanvas();
@@ -72,6 +91,7 @@ export function SensorsTest() {
     canvas.addEventListener('touchmove', updateTouches, { passive: false });
     canvas.addEventListener('touchend', updateTouches, { passive: false });
     canvas.addEventListener('touchcancel', updateTouches, { passive: false });
+
     const context = canvas.getContext('2d');
     let frame = 0;
     const render = () => {
@@ -81,21 +101,54 @@ export function SensorsTest() {
       context.clearRect(0, 0, canvas.width, canvas.height);
       context.strokeStyle = dark ? 'rgba(255,255,255,0.055)' : 'rgba(0,0,0,0.055)';
       context.lineWidth = 1;
-      for (let x = 0; x < canvas.width; x += 32) { context.beginPath(); context.moveTo(x, 0); context.lineTo(x, canvas.height); context.stroke(); }
-      for (let y = 0; y < canvas.height; y += 32) { context.beginPath(); context.moveTo(0, y); context.lineTo(canvas.width, y); context.stroke(); }
+      for (let x = 0; x < canvas.width; x += 32) {
+        context.beginPath();
+        context.moveTo(x, 0);
+        context.lineTo(x, canvas.height);
+        context.stroke();
+      }
+      for (let y = 0; y < canvas.height; y += 32) {
+        context.beginPath();
+        context.moveTo(0, y);
+        context.lineTo(canvas.width, y);
+        context.stroke();
+      }
       touchesRef.current.forEach((touch) => {
-        context.beginPath(); context.arc(touch.x, touch.y, 46, 0, Math.PI * 2); context.fillStyle = `hsl(${primary} / 0.14)`; context.fill();
-        context.beginPath(); context.arc(touch.x, touch.y, 27, 0, Math.PI * 2); context.fillStyle = `hsl(${primary})`; context.fill();
-        context.strokeStyle = 'rgba(255,255,255,0.8)'; context.lineWidth = 2; context.stroke();
-        context.fillStyle = '#fff'; context.font = '600 13px IBM Plex Mono, monospace'; context.textAlign = 'center'; context.textBaseline = 'middle'; context.fillText(String(touch.id), touch.x, touch.y);
+        context.beginPath();
+        context.arc(touch.x, touch.y, 46, 0, Math.PI * 2);
+        context.fillStyle = `hsl(${primary} / 0.14)`;
+        context.fill();
+        context.beginPath();
+        context.arc(touch.x, touch.y, 27, 0, Math.PI * 2);
+        context.fillStyle = `hsl(${primary})`;
+        context.fill();
+        context.strokeStyle = 'rgba(255,255,255,0.8)';
+        context.lineWidth = 2;
+        context.stroke();
+        context.fillStyle = '#fff';
+        context.font = '600 13px IBM Plex Mono, monospace';
+        context.textAlign = 'center';
+        context.textBaseline = 'middle';
+        context.fillText(String(touch.id), touch.x, touch.y);
       });
       if (touchesRef.current.length === 0) {
-        context.fillStyle = dark ? '#7f8794' : '#9CA3AF'; context.font = '500 12px IBM Plex Mono, monospace'; context.textAlign = 'center'; context.fillText('TOUCH SURFACE', canvas.width / 2, canvas.height / 2);
+        context.fillStyle = dark ? '#7f8794' : '#9CA3AF';
+        context.font = '500 12px IBM Plex Mono, monospace';
+        context.textAlign = 'center';
+        context.fillText('TOUCH SURFACE', canvas.width / 2, canvas.height / 2);
       }
       frame = requestAnimationFrame(render);
     };
     render();
-    return () => { window.removeEventListener('resize', resizeCanvas); canvas.removeEventListener('touchstart', updateTouches); canvas.removeEventListener('touchmove', updateTouches); canvas.removeEventListener('touchend', updateTouches); canvas.removeEventListener('touchcancel', updateTouches); cancelAnimationFrame(frame); };
+
+    return () => {
+      window.removeEventListener('resize', resizeCanvas);
+      canvas.removeEventListener('touchstart', updateTouches);
+      canvas.removeEventListener('touchmove', updateTouches);
+      canvas.removeEventListener('touchend', updateTouches);
+      canvas.removeEventListener('touchcancel', updateTouches);
+      cancelAnimationFrame(frame);
+    };
   }, [results.sensors, setResult]);
 
   const completedSignals = Number(Boolean(orientation)) + Number(Boolean(motionData)) + Number(touchDetected);
@@ -104,16 +157,49 @@ export function SensorsTest() {
   const acceleration = (value?: number) => `${(value || 0).toFixed(1)}`;
 
   return (
-    <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="test-page mx-auto flex w-full max-w-5xl flex-col">
+    <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="test-page mx-auto flex w-full max-w-[90rem] flex-col">
       <TestPageHeader testId="T-09" title="Sensors" description="Monitor orientation, acceleration, and multi-touch input in real time." onMarkIssue={() => setResult('sensors', 'issue')} onMarkWorking={() => setResult('sensors', 'working')} />
 
-      <div className="grid grid-cols-1 gap-5 lg:grid-cols-[minmax(0,1.08fr)_minmax(20rem,.92fr)]">
+      <div className="mb-5 grid items-start gap-4 md:grid-cols-3">
+        <Card className="instrument-panel">
+          <CardContent className="p-5">
+            <PanelHeading label="Coverage" description="Independent signals detected" className="mb-4" />
+            <div className="live-readout p-5">
+              <div className="relative z-10 flex items-end justify-between"><span className="readout-value text-4xl text-primary">{completedSignals}<span className="text-base text-muted-foreground"> / 3</span></span><span className="font-mono text-[10px] text-muted-foreground">{coverage}%</span></div>
+              <div className="relative z-10 mt-5 h-2 overflow-hidden rounded-full bg-secondary"><div className="h-full rounded-full bg-primary transition-[width]" style={{ width: `${coverage}%` }} /></div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="instrument-panel">
+          <CardContent className="p-5">
+            <PanelHeading label="Signal activity" description="Live browser sensor channels" className="mb-4" />
+            <div className="grid grid-cols-3 gap-3">
+              <MetricTile label="Orientation" value={orientation ? 'Live' : 'Idle'} accent={Boolean(orientation)} />
+              <MetricTile label="Motion" value={motionData ? 'Live' : 'Idle'} accent={Boolean(motionData)} />
+              <MetricTile label="Touch" value={touchDetected ? 'Seen' : 'Idle'} accent={touchDetected} />
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="instrument-panel">
+          <CardContent className="p-5">
+            <div className="flex items-center justify-between"><span className="panel-label">Result</span><TestStatusBadge status={results.sensors} /></div>
+            <div className="mt-5 grid grid-cols-2 gap-3">
+              <MetricTile label="Detected" value={completedSignals} accent={completedSignals > 0} />
+              <MetricTile label="Touch points" value={touches.length} />
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      <div className="grid items-stretch gap-5 lg:grid-cols-2">
         <Card className="instrument-panel">
           <CardContent className="p-5 sm:p-6">
-            <PanelHeading label="Motion telemetry" description="Live gyroscope and accelerometer readings." trailing={<TestStatusBadge status={results.sensors} />} className="mb-5" />
-            <div className="live-readout relative flex min-h-[260px] items-center justify-center overflow-hidden p-6">
+            <PanelHeading label="Motion telemetry" description="Live gyroscope and accelerometer readings." className="mb-5" />
+            <div className="live-readout relative flex min-h-[300px] items-center justify-center overflow-hidden p-6">
               {permissionGranted === null && (
-                <div className="relative z-10 flex max-w-md flex-col items-center gap-5 text-center"><div className="test-hero-icon"><Smartphone className="h-8 w-8" /></div><div><h3 className="font-display text-lg font-bold">Sensor permission required</h3><p className="mt-2 text-sm text-muted-foreground">iOS requires explicit access before motion data can be read.</p></div><Button onClick={requestPermission} className="h-11 font-semibold">Request Sensor Access</Button></div>
+                <div className="relative z-10 flex max-w-md flex-col items-center gap-5 text-center"><div className="test-hero-icon"><Smartphone className="h-8 w-8" /></div><div><h3 className="font-display text-lg font-bold">Sensor permission required</h3><p className="mt-2 text-sm text-muted-foreground">iOS requires explicit access before motion data can be read.</p></div><Button onClick={requestPermission} className="h-11 gap-2 font-semibold"><Smartphone className="h-4 w-4 shrink-0" /> Request Sensor Access</Button></div>
               )}
               {permissionGranted === false && <div className="relative z-10 flex max-w-md flex-col items-center gap-5 text-center"><div className="test-hero-icon border-status-idle/25 bg-status-idle/10 text-status-idle"><Compass className="h-8 w-8" /></div><div><h3 className="font-display text-lg font-bold">Motion sensors unavailable</h3><p className="mt-2 text-sm text-muted-foreground">No orientation events are exposed by this browser or device.</p></div></div>}
               {permissionGranted === true && (
@@ -137,24 +223,12 @@ export function SensorsTest() {
           </CardContent>
         </Card>
 
-        <div className="flex flex-col gap-5">
-          <Card className="instrument-panel overflow-hidden">
-            <CardContent className="p-0">
-              <div className="flex items-center justify-between border-b border-border/70 px-5 py-4"><div><h2 className="panel-label">Touch matrix</h2><p className="mt-2 text-xs text-muted-foreground">Supports simultaneous touch points</p></div><span className="readout-value text-sm text-primary">{touches.length}</span></div>
-              <div className="relative h-[360px]"><div className="absolute left-4 top-4 z-10 flex items-center gap-2 rounded-md border border-border/70 bg-card/85 px-3 py-2 font-mono text-[10px] font-semibold uppercase tracking-wider shadow-sm backdrop-blur-md"><Fingerprint className="h-4 w-4 text-primary" /> {touches.length} points</div><canvas ref={canvasRef} className="h-full w-full touch-none bg-background/40" /></div>
-            </CardContent>
-          </Card>
-
-          <Card className="instrument-panel">
-            <CardContent className="p-5">
-              <PanelHeading label="Coverage" description="Signals detected" className="mb-4" />
-              <div className="flex items-end justify-between"><span className="readout-value text-3xl text-primary">{completedSignals}<span className="text-sm text-muted-foreground"> / 3</span></span><span className="font-mono text-[10px] text-muted-foreground">{coverage}%</span></div>
-              <div className="mt-4 h-2 overflow-hidden rounded-full bg-secondary"><div className="h-full rounded-full bg-primary transition-[width]" style={{ width: `${coverage}%` }} /></div>
-            </CardContent>
-          </Card>
-
-          <Card className="instrument-panel"><CardContent className="flex items-center justify-between p-5"><span className="panel-label">Result</span><TestStatusBadge status={results.sensors} /></CardContent></Card>
-        </div>
+        <Card className="instrument-panel overflow-hidden">
+          <CardContent className="flex h-full min-h-[500px] flex-col p-0">
+            <div className="flex items-center justify-between border-b border-border/70 px-5 py-4 sm:px-6"><div><h2 className="panel-label">Touch matrix</h2><p className="mt-2 text-sm text-muted-foreground">Place one or more fingers inside the surface.</p></div><span className="readout-value text-sm text-primary">{touches.length}</span></div>
+            <div className="relative min-h-[420px] flex-1"><div className="absolute left-4 top-4 z-10 flex items-center gap-2 rounded-md border border-border/70 bg-card/85 px-3 py-2 font-mono text-[10px] font-semibold uppercase tracking-wider shadow-sm backdrop-blur-md"><Fingerprint className="h-4 w-4 text-primary" /> {touches.length} points</div><canvas ref={canvasRef} className="h-full w-full touch-none bg-background/40" /></div>
+          </CardContent>
+        </Card>
       </div>
     </motion.div>
   );

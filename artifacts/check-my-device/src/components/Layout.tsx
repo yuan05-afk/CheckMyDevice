@@ -15,7 +15,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
   const progressPercent = (completedTests / totalTests) * 100;
 
   const isTestPage = location.startsWith('/test/');
-  const isWideTestPage = location === '/test/keyboard';
+  const isWideTestPage = isTestPage;
   const contentWidth = isWideTestPage ? 'max-w-[90rem]' : 'max-w-5xl';
 
   // Derive readable test name from path for breadcrumb
