@@ -15,6 +15,8 @@ export function Layout({ children }: { children: React.ReactNode }) {
   const progressPercent = (completedTests / totalTests) * 100;
 
   const isTestPage = location.startsWith('/test/');
+  const isWideTestPage = location === '/test/keyboard';
+  const contentWidth = isWideTestPage ? 'max-w-[90rem]' : 'max-w-5xl';
 
   // Derive readable test name from path for breadcrumb
   const testName = isTestPage
@@ -26,7 +28,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
     <div className="min-h-[100dvh] flex flex-col font-sans selection:bg-primary/15 selection:text-primary">
       {/* ── Header ───────────────────────────────────── */}
       <header className="sticky top-0 z-50 w-full border-b border-border bg-background/90 backdrop-blur-md">
-        <div className="container mx-auto max-w-5xl px-6 h-[52px] flex items-center justify-between gap-4">
+        <div className={`container mx-auto px-6 h-[52px] flex items-center justify-between gap-4 ${contentWidth}`}>
           {/* Left: logo + optional breadcrumb */}
           <div className="flex items-center gap-2 min-w-0">
             <Link
@@ -85,7 +87,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
       </header>
 
       {/* ── Content ──────────────────────────────────── */}
-      <main className="flex-1 container mx-auto max-w-5xl px-6 py-8 flex flex-col">
+      <main className={`flex-1 container mx-auto px-6 py-8 flex flex-col ${contentWidth}`}>
         {children}
       </main>
 
