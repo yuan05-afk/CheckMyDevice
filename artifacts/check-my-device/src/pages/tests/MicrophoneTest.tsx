@@ -10,6 +10,7 @@ import { MetricTile, PanelHeading, TestStatusBadge, WaitingReadout } from '@/com
 type SampleState = 'idle' | 'recording' | 'ready' | 'unsupported' | 'error';
 
 const SAMPLE_DURATION_SECONDS = 5;
+const SIGNAL_DETECTION_THRESHOLD = 3;
 
 export function MicrophoneTest() {
   const { results, setResult } = useTestContext();
@@ -23,6 +24,7 @@ export function MicrophoneTest() {
   const [isPlaying, setIsPlaying] = useState(false);
   const [volume, setVolume] = useState(0);
   const [peak, setPeak] = useState(0);
+  const peakRef = useRef(0);
   const streamRef = useRef<MediaStream | null>(null);
   const audioContextRef = useRef<AudioContext | null>(null);
   const analyserRef = useRef<AnalyserNode | null>(null);
@@ -101,7 +103,11 @@ export function MicrophoneTest() {
       }
       const level = Math.min(100, Math.floor(Math.sqrt(sum / data.length) * 400));
       setVolume(level);
-      setPeak((previous) => Math.max(level, Math.floor(previous * 0.995)));
+      if (level >= SIGNAL_DETECTION_THRESHOLD && peakRef.current < SIGNAL_DETECTION_THRESHOLD) {
+        setResult('microphone', 'working');
+      }
+      peakRef.current = Math.max(peakRef.current, level);
+      setPeak(peakRef.current);
 
       const isDark = document.documentElement.classList.contains('dark');
       const primary = getComputedStyle(document.documentElement).getPropertyValue('--primary').trim();
@@ -167,6 +173,7 @@ export function MicrophoneTest() {
         mediaRecorderRef.current = null;
         setSampleState('error');
         setSampleError('The browser could not finish the local audio sample. Please record it again.');
+        setResult('microphone', 'issue');
         stopLiveInput();
       };
 
@@ -177,6 +184,7 @@ export function MicrophoneTest() {
         if (chunks.length === 0) {
           setSampleState('error');
           setSampleError('No audio data was captured. Please record the sample again.');
+          setResult('microphone', 'issue');
           return;
         }
         const blob = new Blob(chunks, { type: recorder.mimeType || chunks[0].type || 'audio/webm' });
@@ -185,6 +193,7 @@ export function MicrophoneTest() {
         setSampleUrl(url);
         setCaptureElapsed(SAMPLE_DURATION_SECONDS);
         setSampleState('ready');
+        setResult('microphone', peakRef.current >= SIGNAL_DETECTION_THRESHOLD ? 'working' : 'issue');
       };
 
       recorder.start(250);
@@ -200,6 +209,7 @@ export function MicrophoneTest() {
       console.error('Local microphone sample error:', caught);
       setSampleState('error');
       setSampleError('This browser could not start the five-second local recording.');
+      setResult('microphone', 'issue');
       stopLiveInput();
     }
   };
@@ -208,7 +218,9 @@ export function MicrophoneTest() {
     stopStream();
     setError(null);
     setSampleError(null);
+    peakRef.current = 0;
     setPeak(0);
+    setResult('microphone', 'untested');
     setIsStarting(true);
     try {
       const nextStream = await navigator.mediaDevices.getUserMedia({ audio: true });
@@ -224,7 +236,6 @@ export function MicrophoneTest() {
       analyserRef.current = analyser;
       drawWaveform();
       beginFiveSecondCapture(nextStream);
-      setResult('microphone', 'working');
     } catch (caught) {
       stopStream();
       const message = caught instanceof Error ? caught.message : 'Failed to access microphone';
@@ -273,7 +284,16 @@ export function MicrophoneTest() {
   }, []);
 
   const captureProgress = Math.min(100, (captureElapsed / SAMPLE_DURATION_SECONDS) * 100);
-  const inputState = sampleState === 'recording' ? 'Recording' : sampleState === 'ready' ? 'Complete' : stream ? 'Active' : 'Idle';
+  const inputState = sampleState === 'recording' ? 'Recording' : sampleState === 'ready' ? 'Captured' : stream ? 'Listening' : 'Idle';
+  const resultState = error
+    ? 'Unavailable'
+    : sampleState === 'recording'
+      ? 'Capturing'
+      : sampleState === 'ready'
+        ? peak >= SIGNAL_DETECTION_THRESHOLD ? 'Detected' : 'No signal'
+        : sampleState === 'error'
+          ? 'Capture failed'
+          : 'Not tested';
 
   return (
     <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="test-page mx-auto flex w-full max-w-[90rem] flex-col">
@@ -329,6 +349,17 @@ export function MicrophoneTest() {
               <MetricTile label="Level" value={`${volume}%`} />
               <MetricTile label="Peak" value={`${peak}%`} />
             </div>
+
+            <div className="mt-5 rounded-xl border border-border/80 bg-background/40 p-5 sm:p-6">
+              <div className="flex items-center justify-between">
+                <span className="panel-label">Result</span>
+                <TestStatusBadge status={results.microphone} />
+              </div>
+              <div className="mt-4 grid grid-cols-2 gap-3">
+                <MetricTile label="Peak" value={`${peak}%`} accent={peak >= SIGNAL_DETECTION_THRESHOLD} />
+                <MetricTile label="State" value={resultState} accent={resultState === 'Detected'} />
+              </div>
+            </div>
           </CardContent>
         </Card>
 
@@ -344,6 +375,7 @@ export function MicrophoneTest() {
               </div>
             </CardContent>
           </Card>
+
 
           <Card className="instrument-panel">
             <CardContent className="p-5">
@@ -368,7 +400,7 @@ export function MicrophoneTest() {
               )}
 
               {(sampleState === 'idle' || sampleState === 'unsupported' || sampleState === 'error') && (
-                <div className="live-readout flex min-h-28 items-center justify-center p-4">
+                <div className="live-readout flex min-h-24 items-center justify-center p-4">
                   <WaitingReadout
                     title={sampleState === 'unsupported' ? 'Playback unsupported' : sampleState === 'error' ? 'Sample unavailable' : 'No sample yet'}
                     detail={sampleError ?? 'Start the microphone test to capture five seconds'}
@@ -380,13 +412,6 @@ export function MicrophoneTest() {
                 <LockKeyhole className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
                 <span>Held temporarily in this tab's memory. Never uploaded, saved to localStorage, or retained after you leave or record again.</span>
               </div>
-            </CardContent>
-          </Card>
-
-          <Card className="instrument-panel">
-            <CardContent className="p-5">
-              <div className="flex items-center justify-between"><span className="panel-label">Result</span><TestStatusBadge status={results.microphone} /></div>
-              <div className="mt-4 grid grid-cols-2 gap-3"><MetricTile label="Peak" value={`${peak}%`} accent={peak > 3} /><MetricTile label="State" value={inputState} /></div>
             </CardContent>
           </Card>
         </div>
