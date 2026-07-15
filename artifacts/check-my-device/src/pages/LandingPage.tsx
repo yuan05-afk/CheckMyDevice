@@ -1,7 +1,6 @@
-import { useEffect, useRef, useState, type ReactNode } from 'react';
+import { useEffect, useRef, useState, type MouseEvent as ReactMouseEvent, type ReactNode } from 'react';
 import { Link } from 'wouter';
 import { motion, useReducedMotion, useScroll, useTransform } from 'framer-motion';
-import { useTheme } from 'next-themes';
 import Lenis from 'lenis';
 import 'lenis/dist/lenis.css';
 import {
@@ -15,8 +14,6 @@ import {
   Battery,
   Wifi,
   Smartphone,
-  Sun,
-  Moon,
   ArrowRight,
   Laptop,
   ShieldCheck,
@@ -29,6 +26,7 @@ import {
   LockKeyhole,
   type LucideIcon,
 } from 'lucide-react';
+import { AppTopbar } from '@/components/AppTopbar';
 import { Button } from '@/components/ui/button';
 import diagnosticHero from '@/assets/diagnostic-hero-light-devices-v1.png';
 import diagnosticHeroNight from '@/assets/diagnostic-hero-night-v2.png';
@@ -460,11 +458,14 @@ const privacyItems = [
 
 /* ─── Page ──────────────────────────────────────── */
 export function LandingPage() {
-  const { theme, setTheme } = useTheme();
   const shouldReduce = useReducedMotion();
+  const lenisRef = useRef<Lenis | null>(null);
 
   useEffect(() => {
-    if (shouldReduce) return;
+    if (shouldReduce) {
+      lenisRef.current = null;
+      return;
+    }
 
     const lenis = new Lenis({
       autoRaf: true,
@@ -473,8 +474,12 @@ export function LandingPage() {
       wheelMultiplier: 0.85,
       touchMultiplier: 1.2,
     });
+    lenisRef.current = lenis;
 
-    return () => lenis.destroy();
+    return () => {
+      if (lenisRef.current === lenis) lenisRef.current = null;
+      lenis.destroy();
+    };
   }, [shouldReduce]);
 
   const fadeUp = (delay: number) =>
@@ -486,40 +491,34 @@ export function LandingPage() {
           transition: { delay, duration: 0.5, ease: EASE },
         };
 
+  const handleBrandClick = (event: ReactMouseEvent<HTMLAnchorElement>) => {
+    event.preventDefault();
+    if (lenisRef.current) {
+      lenisRef.current.scrollTo(0, { duration: 1.2 });
+      return;
+    }
+    window.scrollTo({ top: 0, behavior: shouldReduce ? 'auto' : 'smooth' });
+  };
+
   return (
-    <div className="min-h-[100dvh] flex flex-col bg-background text-foreground font-sans antialiased selection:bg-primary/15 selection:text-primary">
+    <div id="landing-top" className="min-h-[100dvh] flex flex-col bg-background text-foreground font-sans antialiased selection:bg-primary/15 selection:text-primary">
 
       {/* ── Nav ────────────────────────────────── */}
-      <header className="sticky top-0 z-50 w-full bg-background">
-        <div className="container mx-auto max-w-6xl px-6 h-[58px] flex items-center justify-between">
-          <div className="flex items-center gap-2.5">
-            <Activity className="w-5 h-5 text-primary" strokeWidth={2} />
-            <span className="text-foreground font-semibold tracking-tight leading-none" style={{ fontFamily: 'var(--font-display)' }}>
-              CheckMyDevice
-            </span>
-          </div>
-          <div className="flex items-center gap-3">
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-8 w-8 text-muted-foreground hover:text-foreground"
-              onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
-              aria-label="Toggle theme"
-              data-testid="landing-theme-toggle"
-            >
-              <Sun className="h-4 w-4 rotate-0 scale-100 transition-all dark:-rotate-90 dark:scale-0" />
-              <Moon className="absolute h-4 w-4 rotate-90 scale-0 transition-all dark:rotate-0 dark:scale-100" />
-            </Button>
-            <Button asChild size="sm" className="h-8 px-4 text-sm font-medium" data-testid="landing-cta-nav">
-              <Link href="/dashboard">Open Diagnostics</Link>
-            </Button>
-          </div>
-        </div>
-      </header>
+      <AppTopbar
+        contentWidth="max-w-6xl"
+        brandHref="#landing-top"
+        onBrandClick={handleBrandClick}
+        themeToggleTestId="landing-theme-toggle"
+        actions={(
+          <Button asChild size="sm" className="h-8 px-4 text-sm font-medium" data-testid="landing-cta-nav">
+            <Link href="/dashboard">Open Diagnostics</Link>
+          </Button>
+        )}
+      />
 
       <main className="flex-1">
         {/* ── Hero ─────────────────────────────── */}
-        <ScrollChapter className="hero-chapter relative overflow-hidden min-h-[calc(100dvh-58px)]" label="CheckMyDevice introduction">
+        <ScrollChapter className="hero-chapter relative overflow-hidden min-h-[calc(100dvh-56px)]" label="CheckMyDevice introduction">
           <HeroBackdrop />
           <div className="hero-content-safe container mx-auto max-w-4xl px-5 sm:px-6 text-center">
             {/* Headline with word animation */}
@@ -763,12 +762,10 @@ export function LandingPage() {
       {/* ── Footer ──────────────────────────────── */}
       <footer className="py-8 bg-background">
         <div className="container mx-auto max-w-6xl px-6 flex flex-col sm:flex-row items-center justify-between gap-4">
-          <div className="flex items-center gap-2">
-            <Activity className="w-4 h-4 text-primary" strokeWidth={2} />
-            <span className="text-sm font-semibold text-foreground tracking-tight" style={{ fontFamily: 'var(--font-display)' }}>
-              CheckMyDevice
-            </span>
-          </div>
+          <a href="#landing-top" onClick={handleBrandClick} className="flex items-center gap-2 transition-opacity hover:opacity-75 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/45" aria-label="Scroll to top">
+            <Activity className="h-4 w-4 text-primary" strokeWidth={2} />
+            <span className="font-display text-sm font-semibold tracking-tight text-foreground">CheckMyDevice</span>
+          </a>
           <p className="text-xs text-muted-foreground">
             Some tests require browser permissions. Results may vary by browser and platform.
           </p>

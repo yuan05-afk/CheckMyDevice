@@ -1,33 +1,87 @@
 import { useEffect, useRef, useState } from 'react';
 import { motion } from 'framer-motion';
-import { LockKeyhole, Mic as MicIcon, ShieldAlert, Waves } from 'lucide-react';
+import { LockKeyhole, Mic as MicIcon, Pause, Play, RotateCcw, ShieldAlert, Waves } from 'lucide-react';
 import { useTestContext } from '@/context/TestContext';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { TestPageHeader } from '@/components/TestPageHeader';
 import { MetricTile, PanelHeading, TestStatusBadge, WaitingReadout } from '@/components/DiagnosticPrimitives';
 
+type SampleState = 'idle' | 'recording' | 'ready' | 'unsupported' | 'error';
+
+const SAMPLE_DURATION_SECONDS = 5;
+
 export function MicrophoneTest() {
   const { results, setResult } = useTestContext();
   const [stream, setStream] = useState<MediaStream | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [sampleError, setSampleError] = useState<string | null>(null);
+  const [sampleState, setSampleState] = useState<SampleState>('idle');
+  const [sampleUrl, setSampleUrl] = useState<string | null>(null);
+  const [captureElapsed, setCaptureElapsed] = useState(0);
+  const [isStarting, setIsStarting] = useState(false);
+  const [isPlaying, setIsPlaying] = useState(false);
   const [volume, setVolume] = useState(0);
   const [peak, setPeak] = useState(0);
   const streamRef = useRef<MediaStream | null>(null);
   const audioContextRef = useRef<AudioContext | null>(null);
   const analyserRef = useRef<AnalyserNode | null>(null);
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const sampleUrlRef = useRef<string | null>(null);
+  const audioRef = useRef<HTMLAudioElement>(null);
+  const stopCaptureTimerRef = useRef<number | null>(null);
+  const captureTickerRef = useRef<number | null>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const animationFrameRef = useRef(0);
 
-  const stopStream = () => {
+  const clearCaptureTimers = () => {
+    if (stopCaptureTimerRef.current !== null) window.clearTimeout(stopCaptureTimerRef.current);
+    if (captureTickerRef.current !== null) window.clearInterval(captureTickerRef.current);
+    stopCaptureTimerRef.current = null;
+    captureTickerRef.current = null;
+  };
+
+  const stopLiveInput = () => {
     streamRef.current?.getTracks().forEach((track) => track.stop());
     streamRef.current = null;
     setStream(null);
+    analyserRef.current = null;
     if (audioContextRef.current) {
-      audioContextRef.current.close();
+      void audioContextRef.current.close();
       audioContextRef.current = null;
     }
     cancelAnimationFrame(animationFrameRef.current);
+    setVolume(0);
+  };
+
+  const discardActiveCapture = () => {
+    clearCaptureTimers();
+    const recorder = mediaRecorderRef.current;
+    if (recorder && recorder.state !== 'inactive') {
+      recorder.ondataavailable = null;
+      recorder.onstop = null;
+      recorder.onerror = null;
+      recorder.stop();
+    }
+    mediaRecorderRef.current = null;
+  };
+
+  const stopStream = () => {
+    discardActiveCapture();
+    stopLiveInput();
+  };
+
+  const clearSample = () => {
+    const audio = audioRef.current;
+    if (audio) {
+      audio.pause();
+      audio.removeAttribute('src');
+      audio.load();
+    }
+    setIsPlaying(false);
+    if (sampleUrlRef.current) URL.revokeObjectURL(sampleUrlRef.current);
+    sampleUrlRef.current = null;
+    setSampleUrl(null);
   };
 
   const drawWaveform = () => {
@@ -55,7 +109,12 @@ export function MicrophoneTest() {
       ctx.fillRect(0, 0, canvas.width, canvas.height);
       ctx.strokeStyle = isDark ? 'rgba(255,255,255,0.045)' : 'rgba(0,0,0,0.045)';
       ctx.lineWidth = 1;
-      for (let y = 24; y < canvas.height; y += 24) { ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(canvas.width, y); ctx.stroke(); }
+      for (let y = 24; y < canvas.height; y += 24) {
+        ctx.beginPath();
+        ctx.moveTo(0, y);
+        ctx.lineTo(canvas.width, y);
+        ctx.stroke();
+      }
       ctx.strokeStyle = `hsl(${primary})`;
       ctx.lineWidth = 3;
       ctx.beginPath();
@@ -63,17 +122,94 @@ export function MicrophoneTest() {
       data.forEach((sample, index) => {
         const x = index * sliceWidth;
         const y = (sample / 128) * canvas.height / 2;
-        if (index === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+        if (index === 0) ctx.moveTo(x, y);
+        else ctx.lineTo(x, y);
       });
       ctx.stroke();
     };
     draw();
   };
 
+  const beginFiveSecondCapture = (nextStream: MediaStream) => {
+    clearSample();
+    setSampleError(null);
+    setCaptureElapsed(0);
+
+    if (typeof MediaRecorder === 'undefined') {
+      setSampleState('unsupported');
+      setSampleError('This browser can show the live microphone signal, but it cannot create a local playback sample.');
+      return;
+    }
+
+    const preferredMimeType = [
+      'audio/webm;codecs=opus',
+      'audio/webm',
+      'audio/ogg;codecs=opus',
+      'audio/mp4',
+    ].find((type) => MediaRecorder.isTypeSupported(type));
+
+    try {
+      const recorder = preferredMimeType
+        ? new MediaRecorder(nextStream, { mimeType: preferredMimeType })
+        : new MediaRecorder(nextStream);
+      const chunks: Blob[] = [];
+      mediaRecorderRef.current = recorder;
+
+      recorder.ondataavailable = (event) => {
+        if (event.data.size > 0) chunks.push(event.data);
+      };
+
+      recorder.onerror = () => {
+        clearCaptureTimers();
+        recorder.ondataavailable = null;
+        recorder.onstop = null;
+        recorder.onerror = null;
+        mediaRecorderRef.current = null;
+        setSampleState('error');
+        setSampleError('The browser could not finish the local audio sample. Please record it again.');
+        stopLiveInput();
+      };
+
+      recorder.onstop = () => {
+        clearCaptureTimers();
+        mediaRecorderRef.current = null;
+        stopLiveInput();
+        if (chunks.length === 0) {
+          setSampleState('error');
+          setSampleError('No audio data was captured. Please record the sample again.');
+          return;
+        }
+        const blob = new Blob(chunks, { type: recorder.mimeType || chunks[0].type || 'audio/webm' });
+        const url = URL.createObjectURL(blob);
+        sampleUrlRef.current = url;
+        setSampleUrl(url);
+        setCaptureElapsed(SAMPLE_DURATION_SECONDS);
+        setSampleState('ready');
+      };
+
+      recorder.start(250);
+      setSampleState('recording');
+      const startedAt = performance.now();
+      captureTickerRef.current = window.setInterval(() => {
+        setCaptureElapsed(Math.min(SAMPLE_DURATION_SECONDS, (performance.now() - startedAt) / 1000));
+      }, 100);
+      stopCaptureTimerRef.current = window.setTimeout(() => {
+        if (recorder.state !== 'inactive') recorder.stop();
+      }, SAMPLE_DURATION_SECONDS * 1000);
+    } catch (caught) {
+      console.error('Local microphone sample error:', caught);
+      setSampleState('error');
+      setSampleError('This browser could not start the five-second local recording.');
+      stopLiveInput();
+    }
+  };
+
   const startMic = async () => {
     stopStream();
     setError(null);
+    setSampleError(null);
     setPeak(0);
+    setIsStarting(true);
     try {
       const nextStream = await navigator.mediaDevices.getUserMedia({ audio: true });
       streamRef.current = nextStream;
@@ -87,12 +223,34 @@ export function MicrophoneTest() {
       audioContext.createMediaStreamSource(nextStream).connect(analyser);
       analyserRef.current = analyser;
       drawWaveform();
+      beginFiveSecondCapture(nextStream);
       setResult('microphone', 'working');
     } catch (caught) {
+      stopStream();
       const message = caught instanceof Error ? caught.message : 'Failed to access microphone';
       console.error('Microphone access error:', caught);
       setError(message);
       setResult('microphone', 'issue');
+    } finally {
+      setIsStarting(false);
+    }
+  };
+
+  const togglePlayback = async () => {
+    const audio = audioRef.current;
+    if (!audio || !sampleUrl) return;
+    if (!audio.paused) {
+      audio.pause();
+      setIsPlaying(false);
+      return;
+    }
+    try {
+      audio.currentTime = 0;
+      await audio.play();
+      setIsPlaying(true);
+    } catch (caught) {
+      console.error('Microphone sample playback error:', caught);
+      setSampleError('The browser could not play this sample. Please record it again.');
     }
   };
 
@@ -100,19 +258,29 @@ export function MicrophoneTest() {
     const resizeCanvas = () => {
       const canvas = canvasRef.current;
       const parent = canvas?.parentElement;
-      if (canvas && parent) { canvas.width = parent.clientWidth; canvas.height = parent.clientHeight; }
+      if (canvas && parent) {
+        canvas.width = parent.clientWidth;
+        canvas.height = parent.clientHeight;
+      }
     };
     window.addEventListener('resize', resizeCanvas);
     resizeCanvas();
-    return () => { window.removeEventListener('resize', resizeCanvas); stopStream(); };
+    return () => {
+      window.removeEventListener('resize', resizeCanvas);
+      stopStream();
+      clearSample();
+    };
   }, []);
+
+  const captureProgress = Math.min(100, (captureElapsed / SAMPLE_DURATION_SECONDS) * 100);
+  const inputState = sampleState === 'recording' ? 'Recording' : sampleState === 'ready' ? 'Complete' : stream ? 'Active' : 'Idle';
 
   return (
     <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="test-page mx-auto flex w-full max-w-[90rem] flex-col">
       <TestPageHeader
         testId="T-04"
         title="Microphone"
-        description="Watch the waveform, input level, and peak response while you speak."
+        description="Capture five seconds, inspect the input response, then play the newest sample locally."
         onMarkIssue={() => setResult('microphone', 'issue')}
         onMarkWorking={() => setResult('microphone', 'working')}
       />
@@ -120,27 +288,44 @@ export function MicrophoneTest() {
       <div className="grid grid-cols-1 gap-5 lg:grid-cols-[minmax(0,2fr)_minmax(19rem,1fr)]">
         <Card className="instrument-panel">
           <CardContent className="p-5 sm:p-6">
-            <PanelHeading label="Live waveform" description="Sound is analyzed in real time and never leaves this tab." className="mb-5" />
+            <PanelHeading label="Live waveform" description="The waveform and five-second sample are processed locally in this tab." className="mb-5" />
             <div className="live-readout relative flex min-h-[350px] items-center justify-center overflow-hidden">
               {!stream && !error && (
                 <div className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-5 bg-card/92 px-6 text-center backdrop-blur-md">
                   <div className="test-hero-icon"><MicIcon className="h-8 w-8" /></div>
-                  <div><h3 className="font-display text-lg font-bold">Ready to listen locally</h3><p className="mt-2 max-w-md text-sm leading-relaxed text-muted-foreground">Grant microphone permission, then speak to see the signal trace react.</p></div>
-                  <Button onClick={startMic} className="h-11 min-w-48 gap-2 font-semibold"><Waves className="h-4 w-4 shrink-0" /> Start Microphone Test</Button>
+                  <div>
+                    <h3 className="font-display text-lg font-bold">{sampleState === 'ready' ? 'Five-second sample ready' : 'Ready to capture locally'}</h3>
+                    <p className="mt-2 max-w-md text-sm leading-relaxed text-muted-foreground">
+                      {sampleState === 'ready'
+                        ? 'Use Local sample to hear the newest capture, or record another five seconds.'
+                        : 'Grant microphone permission. Recording begins immediately, stops after five seconds, and stays only in this tab.'}
+                    </p>
+                  </div>
+                  <Button onClick={startMic} disabled={isStarting} className="h-11 min-w-48 gap-2 font-semibold">
+                    {sampleState === 'ready' ? <RotateCcw className="h-4 w-4 shrink-0" /> : <Waves className="h-4 w-4 shrink-0" />}
+                    {isStarting ? 'Requesting Access' : sampleState === 'ready' ? 'Record New Sample' : 'Start Microphone Test'}
+                  </Button>
                 </div>
               )}
               {error && (
                 <div className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-5 bg-card/92 px-6 text-center backdrop-blur-md">
                   <div className="test-hero-icon border-status-fail/25 bg-status-fail/10 text-status-fail"><ShieldAlert className="h-8 w-8" /></div>
                   <div><h3 className="font-display text-lg font-bold">Microphone unavailable</h3><p className="mt-2 max-w-md text-sm leading-relaxed text-muted-foreground">{error}. Check browser permissions, then retry.</p></div>
-                  <Button variant="outline" onClick={startMic} className="h-11 font-semibold">Retry Microphone</Button>
+                  <Button variant="outline" onClick={startMic} disabled={isStarting} className="h-11 gap-2 font-semibold"><RotateCcw className="h-4 w-4" />Retry Microphone</Button>
                 </div>
               )}
               <canvas ref={canvasRef} className="absolute inset-0 h-full w-full" />
-              {stream && <div className="absolute left-4 top-4 z-10 flex items-center gap-2 rounded-md border border-primary/20 bg-card/75 px-3 py-2 font-mono text-[10px] uppercase tracking-[0.12em] backdrop-blur-md"><span className="signal-status-dot" /> Listening</div>}
+              {stream && (
+                <div className="absolute left-4 top-4 z-10 flex items-center gap-2 rounded-md border border-primary/20 bg-card/75 px-3 py-2 font-mono text-[10px] uppercase tracking-[0.12em] backdrop-blur-md">
+                  <span className="signal-status-dot" />
+                  {sampleState === 'recording'
+                    ? `Recording ${captureElapsed.toFixed(1)} / ${SAMPLE_DURATION_SECONDS}.0s`
+                    : 'Listening locally'}
+                </div>
+              )}
             </div>
             <div className="mt-5 grid grid-cols-3 gap-3">
-              <MetricTile label="Input" value={stream ? 'Active' : 'Idle'} accent={Boolean(stream)} />
+              <MetricTile label="Input" value={inputState} accent={sampleState === 'recording' || sampleState === 'ready'} />
               <MetricTile label="Level" value={`${volume}%`} />
               <MetricTile label="Peak" value={`${peak}%`} />
             </div>
@@ -162,16 +347,46 @@ export function MicrophoneTest() {
 
           <Card className="instrument-panel">
             <CardContent className="p-5">
-              <PanelHeading label="Signal check" className="mb-4" />
-              {stream ? <div className="space-y-3"><div className="flex justify-between text-sm"><span className="text-muted-foreground">Response</span><span className="readout-value text-xs">{peak > 3 ? 'Detected' : 'Waiting'}</span></div><div className="flex justify-between text-sm"><span className="text-muted-foreground">Processing</span><span className="readout-value text-xs">Local</span></div></div> : <div className="live-readout flex min-h-28 items-center justify-center p-4"><WaitingReadout title="Awaiting input" detail="Start the microphone test" /></div>}
-              <div className="mt-4 flex items-center gap-2 border-t border-border/70 pt-4 text-xs text-muted-foreground"><LockKeyhole className="h-4 w-4 text-primary" /> Audio is not saved</div>
+              <PanelHeading label="Local sample" description="Newest five-second capture" className="mb-4" />
+              <audio ref={audioRef} src={sampleUrl ?? undefined} className="hidden" preload="metadata" onEnded={() => setIsPlaying(false)} onPause={() => setIsPlaying(false)} />
+
+              {sampleState === 'recording' && (
+                <div className="live-readout p-4" aria-live="polite">
+                  <div className="flex items-center justify-between"><span className="spec-item">Recording</span><span className="readout-value text-sm">{captureElapsed.toFixed(1)} / {SAMPLE_DURATION_SECONDS}.0s</span></div>
+                  <div className="mt-4 h-2 overflow-hidden rounded-full bg-secondary"><div className="h-full bg-primary transition-[width] duration-100" style={{ width: `${captureProgress}%` }} /></div>
+                </div>
+              )}
+
+              {sampleState === 'ready' && sampleUrl && (
+                <div className="space-y-3">
+                  <Button onClick={togglePlayback} className="h-11 w-full gap-2 font-semibold">
+                    {isPlaying ? <Pause className="h-4 w-4 shrink-0" /> : <Play className="h-4 w-4 shrink-0" />}
+                    {isPlaying ? 'Pause Playback' : 'Play Latest 5 Seconds'}
+                  </Button>
+                  <Button variant="outline" onClick={startMic} disabled={isStarting} className="h-10 w-full gap-2 font-semibold"><RotateCcw className="h-4 w-4 shrink-0" />Record Again</Button>
+                </div>
+              )}
+
+              {(sampleState === 'idle' || sampleState === 'unsupported' || sampleState === 'error') && (
+                <div className="live-readout flex min-h-28 items-center justify-center p-4">
+                  <WaitingReadout
+                    title={sampleState === 'unsupported' ? 'Playback unsupported' : sampleState === 'error' ? 'Sample unavailable' : 'No sample yet'}
+                    detail={sampleError ?? 'Start the microphone test to capture five seconds'}
+                  />
+                </div>
+              )}
+
+              <div className="mt-4 flex items-start gap-2 border-t border-border/70 pt-4 text-xs leading-relaxed text-muted-foreground">
+                <LockKeyhole className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
+                <span>Held temporarily in this tab's memory. Never uploaded, saved to localStorage, or retained after you leave or record again.</span>
+              </div>
             </CardContent>
           </Card>
 
           <Card className="instrument-panel">
             <CardContent className="p-5">
               <div className="flex items-center justify-between"><span className="panel-label">Result</span><TestStatusBadge status={results.microphone} /></div>
-              <div className="mt-4 grid grid-cols-2 gap-3"><MetricTile label="Peak" value={`${peak}%`} accent={peak > 3} /><MetricTile label="State" value={stream ? 'Listening' : 'Idle'} /></div>
+              <div className="mt-4 grid grid-cols-2 gap-3"><MetricTile label="Peak" value={`${peak}%`} accent={peak > 3} /><MetricTile label="State" value={inputState} /></div>
             </CardContent>
           </Card>
         </div>

@@ -71,6 +71,8 @@ Run package scripts as `pnpm --filter <package-name> run <script>`. Root `pnpm r
 
 Use `artifacts/check-my-device/src/pages/tests/KeyboardTest.tsx` as the visual-language reference for every hardware test page, but do not force its card placement onto tests with different interaction needs:
 
+- Use `AppTopbar` for the shared landing-page and app-route topbar. Keep the brand, theme toggle, border, height, and breadcrumb treatment centralized there; route-specific progress or CTA controls belong in its `actions` slot.
+- The landing-page brand smoothly scrolls to the top. App-route brands navigate home, and every non-home route exposes its current page through `AppTopbar` breadcrumbs, including `/dashboard`.
 - Use `TestPageHeader` for the shared test ID, title, description, and result actions.
 - Test routes use the wide diagnostic workspace supplied by `Layout`; page roots should use `test-page mx-auto flex w-full max-w-[90rem] flex-col`.
 - Keyboard is the full-width exception: its compact three-card activity row sits above the full-width keyboard because the key layout needs maximum horizontal space.
@@ -82,6 +84,9 @@ Use `artifacts/check-my-device/src/pages/tests/KeyboardTest.tsx` as the visual-l
 - Use `panel-label`, `live-readout`, `metric-tile`, `readout-value`, and semantic status tokens to preserve the Instrument Panel visual language.
 - Never introduce horizontal scrolling for a diagnostic control. Complex layouts must scale fluidly and remain usable at supported viewport widths.
 - Never enter fullscreen, request Keyboard Lock, or trigger intrusive permission flows automatically. Permission and immersive-mode actions require an explicit user click and must be necessary for the test.
+- Distinguish native browser permissions from app consent. Camera and microphone must call `getUserMedia` only from an explicit user action so the browser can show its genuine permission prompt.
+- Ordinary keyboard, mouse, and wheel events have no native browser permission prompt. Do not fake one or claim that browser permission was granted.
+- The Mouse test uses a clearly labeled in-app Start/Stop consent gate; attach its diagnostic movement, click, context-menu, and wheel listeners only while that test is active.
 - Represent browser and OS limitations honestly. Do not count hardware-only controls such as laptop Fn as verified unless the browser actually emits a reliable event.
 - Keep the app client-side unless backend work is explicitly requested. Hardware APIs and permissions vary by browser, OS, device, and secure-context rules.
 - Statuses are `untested`, `working`, `issue`, and `unsupported`; they persist locally and are not synced.

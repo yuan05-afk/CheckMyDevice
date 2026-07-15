@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
 import { motion } from 'framer-motion';
-import { Activity, Check, MousePointer2 } from 'lucide-react';
+import { Activity, Check, CircleStop, MousePointer2, Play, ShieldCheck } from 'lucide-react';
 import { useTestContext } from '@/context/TestContext';
+import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { TestPageHeader } from '@/components/TestPageHeader';
 import { MetricTile, PanelHeading, TestStatusBadge } from '@/components/DiagnosticPrimitives';
@@ -24,6 +25,7 @@ const actionLabels = [
 export function MouseTest() {
   const { results, setResult } = useTestContext();
   const [logs, setLogs] = useState<MouseEventLog[]>([]);
+  const [isTestActive, setIsTestActive] = useState(false);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [testsPassed, setTestsPassed] = useState({
     leftClick: false,
@@ -97,8 +99,14 @@ export function MouseTest() {
 
     const handleContextMenu = (event: MouseEvent) => event.preventDefault();
     resizeCanvas();
-    render();
     window.addEventListener('resize', resizeCanvas);
+
+    if (!isTestActive) {
+      context.clearRect(0, 0, canvas.width, canvas.height);
+      return () => window.removeEventListener('resize', resizeCanvas);
+    }
+
+    render();
     canvas.addEventListener('mousemove', handleMouseMove);
     canvas.addEventListener('mousedown', handleMouseDown);
     canvas.addEventListener('contextmenu', handleContextMenu);
@@ -112,13 +120,19 @@ export function MouseTest() {
       canvas.removeEventListener('wheel', handleWheel);
       cancelAnimationFrame(animationFrameId);
     };
-  }, []);
+  }, [isTestActive]);
 
   useEffect(() => {
     if (testsPassed.leftClick && testsPassed.scroll && testsPassed.movement && results.mouse !== 'working') {
       setResult('mouse', 'working');
     }
   }, [testsPassed, results.mouse, setResult]);
+
+  const startTest = () => {
+    setLogs([]);
+    setTestsPassed({ leftClick: false, rightClick: false, middleClick: false, scroll: false, movement: false });
+    setIsTestActive(true);
+  };
 
   const verifiedCount = Object.values(testsPassed).filter(Boolean).length;
   const latestEvent = logs[0];
@@ -137,7 +151,7 @@ export function MouseTest() {
         <div className="order-2 flex flex-col gap-4">
         <Card className="instrument-panel">
           <CardContent className="p-5">
-            <PanelHeading label="Detected actions" description={`${verifiedCount} of ${actionLabels.length} inputs verified`} className="mb-4" />
+            <PanelHeading label="Detected actions" description={isTestActive ? `${verifiedCount} of ${actionLabels.length} inputs verified` : 'Start the test before input is captured'} className="mb-4" />
             <div className="grid grid-cols-2 gap-2">
               {actionLabels.map(([key, label]) => (
                 <div key={key} className="metric-tile flex items-center justify-between gap-3 px-3 py-2.5 text-xs font-semibold">
@@ -160,7 +174,7 @@ export function MouseTest() {
                   <p className="mt-2 font-mono text-xs text-muted-foreground">{latestEvent.details}</p>
                 </div>
               ) : (
-                <div className="relative z-10 flex items-center gap-3 text-sm text-muted-foreground"><Activity className="h-5 w-5 text-primary" /> Waiting for a click or scroll</div>
+                <div className="relative z-10 flex items-center gap-3 text-sm text-muted-foreground">{isTestActive ? <><Activity className="h-5 w-5 text-primary" /> Waiting for a click or scroll</> : <><ShieldCheck className="h-5 w-5 text-primary" /> Consent required to begin</>}</div>
               )}
             </div>
           </CardContent>
@@ -181,14 +195,30 @@ export function MouseTest() {
         <CardContent className="p-0">
           <div className="flex items-center justify-between border-b border-border/70 px-5 py-4 sm:px-6">
             <div><h2 className="panel-label">Interactive surface</h2><p className="mt-2 text-sm text-muted-foreground">Move across the surface, click each button, and scroll in either direction.</p></div>
-            <div className="hidden items-center gap-2 rounded-md border border-primary/15 bg-primary/6 px-3 py-2 font-mono text-[10px] uppercase tracking-wider text-primary sm:flex"><MousePointer2 className="h-4 w-4" /> Input active</div>
+            {isTestActive ? (
+              <Button type="button" variant="outline" onClick={() => setIsTestActive(false)} className="h-9 gap-2 px-3 text-xs font-semibold"><CircleStop className="h-4 w-4 shrink-0" /> Stop Test</Button>
+            ) : (
+              <div className="hidden items-center gap-2 rounded-md border border-primary/15 bg-primary/6 px-3 py-2 font-mono text-[10px] uppercase tracking-wider text-primary sm:flex"><ShieldCheck className="h-4 w-4" /> Consent required</div>
+            )}
           </div>
           <div className="relative h-[clamp(26rem,52vh,38rem)] min-h-[420px]">
-            <div className="pointer-events-none absolute left-1/2 top-1/2 z-10 flex -translate-x-1/2 -translate-y-1/2 flex-col items-center gap-3 text-center text-muted-foreground/70">
-              <MousePointer2 className="h-7 w-7 text-primary/55" />
-              <span className="font-mono text-[10px] uppercase tracking-[0.18em]">Test mouse or trackpad here</span>
-            </div>
-            <canvas ref={canvasRef} className="h-full w-full cursor-crosshair touch-none bg-[radial-gradient(circle_at_center,hsl(var(--primary)/0.08),transparent_58%)]" />
+            {!isTestActive ? (
+              <div className="absolute inset-0 z-20 flex items-center justify-center bg-background/82 p-6 backdrop-blur-sm">
+                <div className="flex max-w-md flex-col items-center text-center">
+                  <div className="test-hero-icon"><ShieldCheck className="h-8 w-8" /></div>
+                  <h3 className="mt-5 font-display text-xl font-bold">Your input stays paused</h3>
+                  <p className="mt-2 text-sm leading-relaxed text-muted-foreground">Browsers do not expose a native permission prompt for ordinary mouse events. Start the test to allow this page to listen only inside the surface below.</p>
+                  <Button type="button" onClick={startTest} className="mt-6 h-11 gap-2 px-6 font-semibold"><Play className="h-4 w-4 shrink-0" /> Start Mouse Test</Button>
+                  <p className="mt-4 font-mono text-[10px] uppercase tracking-wider text-muted-foreground">Nothing recorded or uploaded</p>
+                </div>
+              </div>
+            ) : (
+              <div className="pointer-events-none absolute left-1/2 top-1/2 z-10 flex -translate-x-1/2 -translate-y-1/2 flex-col items-center gap-3 text-center text-muted-foreground/70">
+                <MousePointer2 className="h-7 w-7 text-primary/55" />
+                <span className="font-mono text-[10px] uppercase tracking-[0.18em]">Test mouse or trackpad here</span>
+              </div>
+            )}
+            <canvas ref={canvasRef} className={`h-full w-full touch-none bg-[radial-gradient(circle_at_center,hsl(var(--primary)/0.08),transparent_58%)] ${isTestActive ? 'cursor-crosshair' : 'cursor-default'}`} />
           </div>
         </CardContent>
         </Card>
