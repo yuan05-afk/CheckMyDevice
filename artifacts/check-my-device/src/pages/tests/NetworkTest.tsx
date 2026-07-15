@@ -60,8 +60,8 @@ export function NetworkTest() {
     <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="test-page mx-auto flex w-full max-w-[90rem] flex-col">
       <TestPageHeader testId="T-08" title="Network" description="Inspect connection state, link telemetry, latency, and download throughput." onMarkIssue={() => setResult('network', 'issue')} onMarkWorking={() => setResult('network', 'working')} />
 
-      <div className="flex flex-col gap-5">
-        <Card className="order-2 instrument-panel">
+      <div className="grid grid-cols-1 gap-5 lg:grid-cols-[minmax(0,2fr)_minmax(19rem,1fr)]">
+        <Card className="instrument-panel">
           <CardContent className="p-5 sm:p-6">
             <PanelHeading label="Connection monitor" description="Browser-reported status and link quality." className="mb-5" />
             <div className="live-readout relative flex min-h-[340px] items-center justify-center overflow-hidden p-6">
@@ -83,7 +83,7 @@ export function NetworkTest() {
           </CardContent>
         </Card>
 
-        <div className="order-1 grid items-start gap-4 md:grid-cols-3">
+        <div className="flex flex-col gap-5">
           <Card className="instrument-panel">
             <CardContent className="p-5">
               <PanelHeading label="Speed test" description="5 MB download sample" className="mb-5" />

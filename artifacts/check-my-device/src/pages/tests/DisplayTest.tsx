@@ -70,8 +70,8 @@ export function DisplayTest() {
       <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="test-page mx-auto flex w-full max-w-[90rem] flex-col">
         <TestPageHeader testId="T-06" title="Display" description="Inspect solid colors, gradients, contrast, and pixel sharpness." onMarkIssue={() => setResult('display', 'issue')} onMarkWorking={() => setResult('display', 'working')} />
 
-        <div className="flex flex-col gap-5">
-          <Card className="order-2 instrument-panel">
+        <div className="grid grid-cols-1 gap-5 lg:grid-cols-[minmax(0,2fr)_minmax(19rem,1fr)]">
+          <Card className="instrument-panel">
             <CardContent className="p-5 sm:p-6">
               <PanelHeading label="Pattern deck" description="Open each card fullscreen and inspect the entire panel." className="mb-5" />
               <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
@@ -92,7 +92,7 @@ export function DisplayTest() {
             </CardContent>
           </Card>
 
-          <div className="order-1 grid items-start gap-4 md:grid-cols-3">
+          <div className="flex flex-col gap-5">
             <Card className="instrument-panel">
               <CardContent className="p-5">
                 <PanelHeading label="Coverage" description="Patterns inspected" className="mb-5" />

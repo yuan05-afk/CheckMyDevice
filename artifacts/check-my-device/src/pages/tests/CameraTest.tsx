@@ -68,8 +68,8 @@ export function CameraTest() {
         onMarkWorking={() => setResult('camera', 'working')}
       />
 
-      <div className="flex flex-col gap-5">
-        <Card className="order-2 instrument-panel">
+      <div className="grid grid-cols-1 gap-5 lg:grid-cols-[minmax(0,2fr)_minmax(19rem,1fr)]">
+        <Card className="instrument-panel">
           <CardContent className="p-5 sm:p-6">
             <PanelHeading label="Live camera" description="The preview stays on this device and is never uploaded." className="mb-5" />
             <div className="live-readout relative flex aspect-video min-h-[320px] items-center justify-center overflow-hidden">
@@ -108,7 +108,7 @@ export function CameraTest() {
           </CardContent>
         </Card>
 
-        <div className="order-1 grid items-start gap-4 md:grid-cols-3">
+        <div className="flex flex-col gap-5">
           <Card className="instrument-panel">
             <CardContent className="p-5">
               <PanelHeading label="Device source" description="Choose the camera used for this preview." className="mb-5" />

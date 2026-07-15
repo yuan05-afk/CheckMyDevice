@@ -133,7 +133,8 @@ export function MouseTest() {
         onMarkWorking={() => setResult('mouse', 'working')}
       />
 
-      <div className="mb-5 grid items-start gap-4 md:grid-cols-3">
+      <div className="grid min-h-[520px] grid-cols-1 items-start gap-5 lg:grid-cols-[minmax(0,2fr)_minmax(19rem,1fr)]">
+        <div className="order-2 flex flex-col gap-4">
         <Card className="instrument-panel">
           <CardContent className="p-5">
             <PanelHeading label="Detected actions" description={`${verifiedCount} of ${actionLabels.length} inputs verified`} className="mb-4" />
@@ -174,9 +175,9 @@ export function MouseTest() {
             </div>
           </CardContent>
         </Card>
-      </div>
+        </div>
 
-      <Card className="instrument-panel overflow-hidden">
+        <Card className="instrument-panel overflow-hidden">
         <CardContent className="p-0">
           <div className="flex items-center justify-between border-b border-border/70 px-5 py-4 sm:px-6">
             <div><h2 className="panel-label">Interactive surface</h2><p className="mt-2 text-sm text-muted-foreground">Move across the surface, click each button, and scroll in either direction.</p></div>
@@ -190,7 +191,8 @@ export function MouseTest() {
             <canvas ref={canvasRef} className="h-full w-full cursor-crosshair touch-none bg-[radial-gradient(circle_at_center,hsl(var(--primary)/0.08),transparent_58%)]" />
           </div>
         </CardContent>
-      </Card>
+        </Card>
+      </div>
     </motion.div>
   );
 }

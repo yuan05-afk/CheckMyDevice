@@ -160,40 +160,7 @@ export function SensorsTest() {
     <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="test-page mx-auto flex w-full max-w-[90rem] flex-col">
       <TestPageHeader testId="T-09" title="Sensors" description="Monitor orientation, acceleration, and multi-touch input in real time." onMarkIssue={() => setResult('sensors', 'issue')} onMarkWorking={() => setResult('sensors', 'working')} />
 
-      <div className="mb-5 grid items-start gap-4 md:grid-cols-3">
-        <Card className="instrument-panel">
-          <CardContent className="p-5">
-            <PanelHeading label="Coverage" description="Independent signals detected" className="mb-4" />
-            <div className="live-readout p-5">
-              <div className="relative z-10 flex items-end justify-between"><span className="readout-value text-4xl text-primary">{completedSignals}<span className="text-base text-muted-foreground"> / 3</span></span><span className="font-mono text-[10px] text-muted-foreground">{coverage}%</span></div>
-              <div className="relative z-10 mt-5 h-2 overflow-hidden rounded-full bg-secondary"><div className="h-full rounded-full bg-primary transition-[width]" style={{ width: `${coverage}%` }} /></div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="instrument-panel">
-          <CardContent className="p-5">
-            <PanelHeading label="Signal activity" description="Live browser sensor channels" className="mb-4" />
-            <div className="grid grid-cols-3 gap-3">
-              <MetricTile label="Orientation" value={orientation ? 'Live' : 'Idle'} accent={Boolean(orientation)} />
-              <MetricTile label="Motion" value={motionData ? 'Live' : 'Idle'} accent={Boolean(motionData)} />
-              <MetricTile label="Touch" value={touchDetected ? 'Seen' : 'Idle'} accent={touchDetected} />
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="instrument-panel">
-          <CardContent className="p-5">
-            <div className="flex items-center justify-between"><span className="panel-label">Result</span><TestStatusBadge status={results.sensors} /></div>
-            <div className="mt-5 grid grid-cols-2 gap-3">
-              <MetricTile label="Detected" value={completedSignals} accent={completedSignals > 0} />
-              <MetricTile label="Touch points" value={touches.length} />
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      <div className="grid items-stretch gap-5 lg:grid-cols-2">
+      <div className="grid grid-cols-1 items-start gap-5 lg:grid-cols-[minmax(0,1.08fr)_minmax(20rem,.92fr)]">
         <Card className="instrument-panel">
           <CardContent className="p-5 sm:p-6">
             <PanelHeading label="Motion telemetry" description="Live gyroscope and accelerometer readings." className="mb-5" />
@@ -223,12 +190,34 @@ export function SensorsTest() {
           </CardContent>
         </Card>
 
-        <Card className="instrument-panel overflow-hidden">
-          <CardContent className="flex h-full min-h-[500px] flex-col p-0">
+        <div className="flex flex-col gap-5">
+          <Card className="instrument-panel overflow-hidden">
+          <CardContent className="flex min-h-[440px] flex-col p-0">
             <div className="flex items-center justify-between border-b border-border/70 px-5 py-4 sm:px-6"><div><h2 className="panel-label">Touch matrix</h2><p className="mt-2 text-sm text-muted-foreground">Place one or more fingers inside the surface.</p></div><span className="readout-value text-sm text-primary">{touches.length}</span></div>
-            <div className="relative min-h-[420px] flex-1"><div className="absolute left-4 top-4 z-10 flex items-center gap-2 rounded-md border border-border/70 bg-card/85 px-3 py-2 font-mono text-[10px] font-semibold uppercase tracking-wider shadow-sm backdrop-blur-md"><Fingerprint className="h-4 w-4 text-primary" /> {touches.length} points</div><canvas ref={canvasRef} className="h-full w-full touch-none bg-background/40" /></div>
-          </CardContent>
-        </Card>
+            <div className="relative min-h-[360px] flex-1"><div className="absolute left-4 top-4 z-10 flex items-center gap-2 rounded-md border border-border/70 bg-card/85 px-3 py-2 font-mono text-[10px] font-semibold uppercase tracking-wider shadow-sm backdrop-blur-md"><Fingerprint className="h-4 w-4 text-primary" /> {touches.length} points</div><canvas ref={canvasRef} className="h-full w-full touch-none bg-background/40" /></div>
+            </CardContent>
+          </Card>
+
+          <Card className="instrument-panel">
+            <CardContent className="p-5">
+              <PanelHeading label="Coverage" description="Independent signals detected" className="mb-4" />
+              <div className="live-readout p-5">
+                <div className="relative z-10 flex items-end justify-between"><span className="readout-value text-4xl text-primary">{completedSignals}<span className="text-base text-muted-foreground"> / 3</span></span><span className="font-mono text-[10px] text-muted-foreground">{coverage}%</span></div>
+                <div className="relative z-10 mt-5 h-2 overflow-hidden rounded-full bg-secondary"><div className="h-full rounded-full bg-primary transition-[width]" style={{ width: `${coverage}%` }} /></div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="instrument-panel">
+            <CardContent className="p-5">
+              <div className="flex items-center justify-between"><span className="panel-label">Result</span><TestStatusBadge status={results.sensors} /></div>
+              <div className="mt-5 grid grid-cols-2 gap-3">
+                <MetricTile label="Detected" value={completedSignals} accent={completedSignals > 0} />
+                <MetricTile label="Touch points" value={touches.length} />
+              </div>
+            </CardContent>
+          </Card>
+        </div>
       </div>
     </motion.div>
   );

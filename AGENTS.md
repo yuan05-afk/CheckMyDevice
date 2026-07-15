@@ -69,12 +69,14 @@ Run package scripts as `pnpm --filter <package-name> run <script>`. Root `pnpm r
 
 ### Canonical diagnostic page design
 
-Use `artifacts/check-my-device/src/pages/tests/KeyboardTest.tsx` as the visual and structural reference for every hardware test page. New and updated tests should follow this composition unless the hardware API requires a clearly justified exception:
+Use `artifacts/check-my-device/src/pages/tests/KeyboardTest.tsx` as the visual-language reference for every hardware test page, but do not force its card placement onto tests with different interaction needs:
 
 - Use `TestPageHeader` for the shared test ID, title, description, and result actions.
 - Test routes use the wide diagnostic workspace supplied by `Layout`; page roots should use `test-page mx-auto flex w-full max-w-[90rem] flex-col`.
-- Place compact, genuinely useful live summaries directly below the header in `grid items-start gap-4 md:grid-cols-3`. Cards keep their natural height; never stretch neighboring cards to fill decorative space.
-- Put the primary interaction in one full-width `instrument-panel` below the summaries. Avoid narrow sidebars when they reduce the usable test surface.
+- Keyboard is the full-width exception: its compact three-card activity row sits above the full-width keyboard because the key layout needs maximum horizontal space.
+- Mouse, Camera, Microphone, Speaker, Display, Battery, Network, and Sensors use their original task-specific composition: the primary tester stays in the left column and supporting cards stack in a right sidebar. On narrow screens, stack the primary tester before the sidebar.
+- Use a responsive two-column grid such as `lg:grid-cols-[minmax(0,2fr)_minmax(19rem,1fr)]`; Sensors may use a more balanced split because motion and touch are both primary surfaces.
+- Choose card placement around the hardware interaction instead of imposing a universal summary-row layout. Supporting cards keep their natural height and should not stretch solely to fill space.
 - Do not duplicate information. If a recent-input, metric, or result card already communicates a value, do not add a second "Live Output" panel for the same data.
 - Live summaries must react to the hardware being tested; avoid static guide cards that do not help users verify behavior.
 - Use `panel-label`, `live-readout`, `metric-tile`, `readout-value`, and semantic status tokens to preserve the Instrument Panel visual language.

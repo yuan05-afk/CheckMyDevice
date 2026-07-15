@@ -1,4 +1,4 @@
-﻿import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { motion } from 'framer-motion';
 import { LockKeyhole, Mic as MicIcon, ShieldAlert, Waves } from 'lucide-react';
 import { useTestContext } from '@/context/TestContext';
@@ -117,8 +117,8 @@ export function MicrophoneTest() {
         onMarkWorking={() => setResult('microphone', 'working')}
       />
 
-      <div className="flex flex-col gap-5">
-        <Card className="order-2 instrument-panel">
+      <div className="grid grid-cols-1 gap-5 lg:grid-cols-[minmax(0,2fr)_minmax(19rem,1fr)]">
+        <Card className="instrument-panel">
           <CardContent className="p-5 sm:p-6">
             <PanelHeading label="Live waveform" description="Sound is analyzed in real time and never leaves this tab." className="mb-5" />
             <div className="live-readout relative flex min-h-[350px] items-center justify-center overflow-hidden">
@@ -147,7 +147,7 @@ export function MicrophoneTest() {
           </CardContent>
         </Card>
 
-        <div className="order-1 grid items-start gap-4 md:grid-cols-3">
+        <div className="flex flex-col gap-5">
           <Card className="instrument-panel">
             <CardContent className="p-5">
               <PanelHeading label="Input level" description="Live signal intensity" className="mb-5" />
