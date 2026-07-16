@@ -394,24 +394,28 @@ const trustSignals = [
     value: '100%',
     icon: Laptop,
     description: 'Every diagnostic runs inside this browser tab on your device.',
+    transition: 'Browser gate',
   },
   {
     label: 'PERMISSIONS',
     value: 'ON REQUEST',
     icon: ShieldCheck,
     description: 'Camera and microphone access starts only after you approve the browser prompt.',
+    transition: 'Local process',
   },
   {
     label: 'DATA COLLECTED',
     value: '0 BYTES',
     icon: Database,
     description: 'No hardware profile, recording, image, or diagnostic report is collected.',
+    transition: 'Direct result',
   },
   {
     label: 'RESULTS',
     value: 'INSTANT',
     icon: Zap,
     description: 'Results appear as your browser reports them, with no upload or processing queue.',
+    transition: null,
   },
 ];
 
@@ -628,54 +632,70 @@ export function LandingPage() {
           <div className="container mx-auto max-w-6xl px-6">
             <SectionIntro
               eyebrow="Local by design"
-              title="Four promises behind every test."
-              description="No vague privacy language. These guarantees explain exactly where a test runs, when permission is requested, what is collected, and how quickly you get a result."
+              title="One local path. Four promises."
+              description="Follow a diagnostic from your device to its result: it runs here, asks before protected access, collects nothing, and reports without an upload queue."
               id="trust-signals-heading"
               icon={ShieldCheck}
             />
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-              {trustSignals.map((signal, index) => {
-                const Icon = signal.icon;
-                return (
-                  <motion.article
-                    key={signal.label}
-                    tabIndex={0}
-                    className="trust-card group relative min-h-56 overflow-hidden rounded-xl border border-border bg-card p-5 outline-none"
-                    initial={shouldReduce ? {} : { opacity: 0, y: 50, scale: 0.94 }}
-                    whileInView={shouldReduce ? {} : { opacity: 1, y: 0, scale: 1 }}
-                    whileHover={shouldReduce ? {} : { y: -6 }}
-                    whileFocus={shouldReduce ? {} : { y: -6 }}
-                    viewport={{ once: false, amount: 0.15 }}
-                    transition={{ delay: index * 0.1, duration: 0.6, ease: EASE }}
-                  >
-                    <span className="trust-card-scan" aria-hidden="true" />
-                    <div className="relative z-10 flex items-start justify-between mb-8">
-                      <span className="grid place-items-center w-10 h-10 rounded-lg bg-primary/10 text-primary transition-transform duration-300 group-hover:scale-110 group-hover:-rotate-3 group-focus:scale-110">
-                        <Icon className="w-5 h-5" strokeWidth={1.7} />
-                      </span>
-                      <span className="flex items-center gap-1.5 font-mono text-[9px] tracking-[0.14em] text-primary uppercase">
-                        <span className="signal-status-dot" aria-hidden="true" />
-                        Active
-                      </span>
-                    </div>
-                    <div className="relative z-10">
-                      <p className="font-mono text-[10px] tracking-[0.16em] text-muted-foreground uppercase mb-2">
-                        {signal.label}
-                      </p>
-                      <p
-                        className="text-xl font-bold text-foreground mb-3 group-hover:text-primary group-focus:text-primary transition-colors"
-                        style={{ fontFamily: 'var(--font-display)' }}
-                      >
-                        {signal.value}
-                      </p>
-                      <p className="text-[0.78rem] leading-relaxed text-muted-foreground">
-                        {signal.description}
-                      </p>
-                    </div>
-                  </motion.article>
-                );
-              })}
+            <div className="trust-flow overflow-hidden rounded-2xl border border-border bg-card shadow-sm">
+              <div className="trust-flow-header flex flex-col gap-3 border-b border-border px-5 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-7">
+                <div className="flex items-center gap-2.5">
+                  <span className="signal-status-dot" aria-hidden="true" />
+                  <span className="font-mono text-[10px] tracking-[0.17em] text-primary uppercase">
+                    Active local diagnostic path
+                  </span>
+                </div>
+                <span className="font-mono text-[9px] tracking-[0.15em] text-muted-foreground uppercase">
+                  4 guarantees / 0 uploads
+                </span>
+              </div>
+
+              <ol className="trust-flow-track" aria-label="The local diagnostic process">
+                {trustSignals.map((signal, index) => {
+                  const Icon = signal.icon;
+                  return (
+                    <motion.li
+                      key={signal.label}
+                      className="trust-flow-step group outline-none"
+                      tabIndex={0}
+                      initial={shouldReduce ? {} : { opacity: 0, x: -24 }}
+                      whileInView={shouldReduce ? {} : { opacity: 1, x: 0 }}
+                      viewport={{ once: false, amount: 0.25 }}
+                      transition={{ delay: index * 0.12, duration: 0.55, ease: EASE }}
+                    >
+                      <div className="trust-flow-node" aria-hidden="true">
+                        <Icon className="h-5 w-5" strokeWidth={1.8} />
+                        <span>{String(index + 1).padStart(2, '0')}</span>
+                      </div>
+
+                      {signal.transition && (
+                        <div className="trust-flow-connector" aria-hidden="true">
+                          <span>{signal.transition}</span>
+                          <ArrowRight className="h-3.5 w-3.5" strokeWidth={1.8} />
+                        </div>
+                      )}
+
+                      <div className="trust-flow-copy">
+                        <p className="font-mono text-[10px] tracking-[0.16em] text-muted-foreground uppercase">
+                          {signal.label}
+                        </p>
+                        <p className="trust-flow-value">{signal.value}</p>
+                        <p className="text-[0.8rem] leading-relaxed text-muted-foreground">
+                          {signal.description}
+                        </p>
+                      </div>
+                    </motion.li>
+                  );
+                })}
+              </ol>
+
+              <div className="trust-flow-footer flex items-start gap-3 border-t border-border px-5 py-4 sm:items-center sm:px-7">
+                <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-primary sm:mt-0" strokeWidth={1.8} />
+                <p className="text-[0.76rem] leading-relaxed text-muted-foreground">
+                  No account, remote analysis service, or upload step exists anywhere in this path.
+                </p>
+              </div>
             </div>
           </div>
         </ScrollChapter>
