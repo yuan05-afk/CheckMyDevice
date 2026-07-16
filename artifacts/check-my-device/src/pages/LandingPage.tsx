@@ -685,6 +685,16 @@ export function LandingPage() {
                           {signal.description}
                         </p>
                       </div>
+
+                      {index === trustSignals.length - 1 && (
+                        <div className="trust-flow-terminal" aria-label="Local result ready">
+                          <span className="trust-flow-terminal-led" aria-hidden="true" />
+                          <span>
+                            <strong>Local result ready</strong>
+                            <small>No server handoff</small>
+                          </span>
+                        </div>
+                      )}
                     </motion.li>
                   );
                 })}

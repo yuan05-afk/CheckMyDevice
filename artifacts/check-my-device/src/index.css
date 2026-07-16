@@ -615,11 +615,17 @@
   position: absolute;
   top: 1.7rem;
   left: 5.25rem;
-  z-index: -1;
+  z-index: 0;
   display: flex;
-  width: calc(100% - 4rem);
+  width: calc(100% - 5.25rem);
   align-items: center;
   color: hsl(var(--primary));
+}
+
+.trust-flow-connector > svg {
+  flex: 0 0 0.875rem;
+  margin-left: -3px;
+  overflow: visible;
 }
 
 .trust-flow-connector::before {
@@ -663,6 +669,64 @@
   color: hsl(var(--primary));
 }
 
+.trust-flow-terminal {
+  position: absolute;
+  top: 1.75rem;
+  left: 5.3rem;
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  max-width: calc(100% - 6.1rem);
+  color: hsl(var(--foreground));
+  transform: translateY(-50%);
+}
+
+.trust-flow-terminal::before {
+  width: clamp(0.5rem, 1.6vw, 1.5rem);
+  height: 1px;
+  flex-shrink: 0;
+  background: hsl(var(--primary) / 0.7);
+  content: '';
+}
+
+.trust-flow-terminal-led {
+  width: 0.5rem;
+  height: 0.5rem;
+  flex-shrink: 0;
+  border-radius: 999px;
+  background: var(--color-status-pass);
+  animation: led-pulse 2.2s ease-in-out infinite;
+}
+
+.trust-flow-terminal > span:last-child {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  line-height: 1.2;
+}
+
+.trust-flow-terminal strong,
+.trust-flow-terminal small {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.trust-flow-terminal strong {
+  font-family: var(--font-mono);
+  font-size: 0.54rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.trust-flow-terminal small {
+  margin-top: 0.18rem;
+  color: hsl(var(--muted-foreground));
+  font-family: var(--font-sans);
+  font-size: 0.62rem;
+}
+
 @media (max-width: 767px) {
   .trust-flow-track {
     display: flex;
@@ -700,10 +764,27 @@
   }
 
   .trust-flow-connector > svg {
-    margin-bottom: -0.05rem;
+    flex: 0 0 0.875rem;
+    margin-top: -3px;
+    margin-left: 0;
+    overflow: visible;
     transform: rotate(90deg);
   }
+
+  .trust-flow-terminal {
+    position: static;
+    grid-column: 2;
+    gap: 0.5rem;
+    max-width: none;
+    margin-top: -0.5rem;
+    transform: none;
+  }
+
+  .trust-flow-terminal::before {
+    width: 1.25rem;
+  }
 }
+
 .signal-status-dot {
   width: 0.4rem;
   height: 0.4rem;
