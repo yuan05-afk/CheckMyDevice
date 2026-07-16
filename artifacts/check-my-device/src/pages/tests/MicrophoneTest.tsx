@@ -35,6 +35,7 @@ export function MicrophoneTest() {
   const captureTickerRef = useRef<number | null>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const animationFrameRef = useRef(0);
+  const requestIdRef = useRef(0);
 
   const clearCaptureTimers = () => {
     if (stopCaptureTimerRef.current !== null) window.clearTimeout(stopCaptureTimerRef.current);
@@ -216,14 +217,18 @@ export function MicrophoneTest() {
 
   const startMic = async () => {
     stopStream();
+    const requestId = ++requestIdRef.current;
     setError(null);
     setSampleError(null);
     peakRef.current = 0;
     setPeak(0);
-    setResult('microphone', 'untested');
     setIsStarting(true);
     try {
       const nextStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      if (requestId !== requestIdRef.current) {
+        nextStream.getTracks().forEach((track) => track.stop());
+        return;
+      }
       streamRef.current = nextStream;
       setStream(nextStream);
       const AudioContextClass = window.AudioContext || (window as typeof window & { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
@@ -237,6 +242,7 @@ export function MicrophoneTest() {
       drawWaveform();
       beginFiveSecondCapture(nextStream);
     } catch (caught) {
+      if (requestId !== requestIdRef.current) return;
       stopStream();
       const message = caught instanceof Error ? caught.message : 'Failed to access microphone';
       console.error('Microphone access error:', caught);
@@ -283,6 +289,22 @@ export function MicrophoneTest() {
     };
   }, []);
 
+  const undoTest = () => {
+    requestIdRef.current += 1;
+    stopStream();
+    clearSample();
+    setError(null);
+    setSampleError(null);
+    setSampleState('idle');
+    setCaptureElapsed(0);
+    setIsStarting(false);
+    setVolume(0);
+    peakRef.current = 0;
+    setPeak(0);
+    const canvas = canvasRef.current;
+    canvas?.getContext('2d')?.clearRect(0, 0, canvas.width, canvas.height);
+  };
+
   const captureProgress = Math.min(100, (captureElapsed / SAMPLE_DURATION_SECONDS) * 100);
   const inputState = sampleState === 'recording' ? 'Recording' : sampleState === 'ready' ? 'Captured' : stream ? 'Listening' : 'Idle';
   const resultState = error
@@ -299,10 +321,11 @@ export function MicrophoneTest() {
     <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="test-page mx-auto flex w-full max-w-[90rem] flex-col">
       <TestPageHeader
         testId="T-04"
+        testKey="microphone"
         title="Microphone"
         description="Capture five seconds, inspect the input response, then play the newest sample locally."
-        onMarkIssue={() => setResult('microphone', 'issue')}
-        onMarkWorking={() => setResult('microphone', 'working')}
+        canUndoTest={isStarting || stream !== null || error !== null || sampleState !== 'idle' || sampleUrl !== null || captureElapsed > 0 || volume > 0 || peak > 0}
+        onUndoTest={undoTest}
       />
 
       <div className="grid grid-cols-1 gap-5 lg:grid-cols-[minmax(0,2fr)_minmax(19rem,1fr)]">

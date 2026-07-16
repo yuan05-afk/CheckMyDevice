@@ -134,6 +134,14 @@ export function MouseTest() {
     setIsTestActive(true);
   };
 
+  const undoTest = () => {
+    setIsTestActive(false);
+    setLogs([]);
+    setTestsPassed({ leftClick: false, rightClick: false, middleClick: false, scroll: false, movement: false });
+    const canvas = canvasRef.current;
+    canvas?.getContext('2d')?.clearRect(0, 0, canvas.width, canvas.height);
+  };
+
   const verifiedCount = Object.values(testsPassed).filter(Boolean).length;
   const latestEvent = logs[0];
 
@@ -141,10 +149,11 @@ export function MouseTest() {
     <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="test-page mx-auto flex w-full max-w-[90rem] flex-col">
       <TestPageHeader
         testId="T-02"
+        testKey="mouse"
         title="Mouse & Trackpad"
         description="Move, click, and scroll inside the test area. Every detected action stays recorded."
-        onMarkIssue={() => setResult('mouse', 'issue')}
-        onMarkWorking={() => setResult('mouse', 'working')}
+        canUndoTest={isTestActive || logs.length > 0 || verifiedCount > 0}
+        onUndoTest={undoTest}
       />
 
       <div className="grid min-h-[520px] grid-cols-1 items-start gap-5 lg:grid-cols-[minmax(0,2fr)_minmax(19rem,1fr)]">

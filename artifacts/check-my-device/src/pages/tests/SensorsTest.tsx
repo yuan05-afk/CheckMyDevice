@@ -8,7 +8,7 @@ import { TestPageHeader } from '@/components/TestPageHeader';
 import { MetricTile, PanelHeading, TestStatusBadge } from '@/components/DiagnosticPrimitives';
 
 type Orientation = { alpha: number; beta: number; gamma: number };
-type MotionReading = { x: number; y: number; z: number };
+type MotionReading = { x: number | null; y: number | null; z: number | null };
 type TouchPoint = { id: number; x: number; y: number };
 
 export function SensorsTest() {
@@ -20,6 +20,7 @@ export function SensorsTest() {
   const [touchDetected, setTouchDetected] = useState(false);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const touchesRef = useRef<TouchPoint[]>([]);
+  const touchSupported = navigator.maxTouchPoints > 0;
 
   useEffect(() => {
     const OrientationEvent = DeviceOrientationEvent as typeof DeviceOrientationEvent & { requestPermission?: () => Promise<string> };
@@ -53,8 +54,8 @@ export function SensorsTest() {
     };
     const handleMotion = (event: DeviceMotionEvent) => {
       const acceleration = event.accelerationIncludingGravity;
-      if (!acceleration || acceleration.x == null) return;
-      setMotionData({ x: acceleration.x || 0, y: acceleration.y || 0, z: acceleration.z || 0 });
+      if (!acceleration || [acceleration.x, acceleration.y, acceleration.z].every((value) => value == null)) return;
+      setMotionData({ x: acceleration.x, y: acceleration.y, z: acceleration.z });
     };
     window.addEventListener('deviceorientation', handleOrientation);
     window.addEventListener('devicemotion', handleMotion);
@@ -135,7 +136,7 @@ export function SensorsTest() {
         context.fillStyle = dark ? '#7f8794' : '#9CA3AF';
         context.font = '500 12px IBM Plex Mono, monospace';
         context.textAlign = 'center';
-        context.fillText('TOUCH SURFACE', canvas.width / 2, canvas.height / 2);
+        context.fillText(touchSupported ? 'TOUCH SURFACE' : 'TOUCH INPUT N/A', canvas.width / 2, canvas.height / 2);
       }
       frame = requestAnimationFrame(render);
     };
@@ -149,16 +150,26 @@ export function SensorsTest() {
       canvas.removeEventListener('touchcancel', updateTouches);
       cancelAnimationFrame(frame);
     };
-  }, [results.sensors, setResult]);
+  }, [results.sensors, setResult, touchSupported]);
+
+  const undoTest = () => {
+    setOrientation(null);
+    setMotionData(null);
+    setTouches([]);
+    touchesRef.current = [];
+    setTouchDetected(false);
+    const canvas = canvasRef.current;
+    canvas?.getContext('2d')?.clearRect(0, 0, canvas.width, canvas.height);
+  };
 
   const completedSignals = Number(Boolean(orientation)) + Number(Boolean(motionData)) + Number(touchDetected);
   const coverage = Math.round((completedSignals / 3) * 100);
-  const degrees = (value?: number) => `${Math.round(value || 0)}°`;
-  const acceleration = (value?: number) => `${(value || 0).toFixed(1)}`;
+  const degrees = (value?: number | null) => value == null ? 'N/A' : `${Math.round(value)}\u00B0`;
+  const acceleration = (value?: number | null) => value == null ? 'N/A' : value.toFixed(1);
 
   return (
     <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="test-page mx-auto flex w-full max-w-[90rem] flex-col">
-      <TestPageHeader testId="T-09" title="Sensors" description="Monitor orientation, acceleration, and multi-touch input in real time." onMarkIssue={() => setResult('sensors', 'issue')} onMarkWorking={() => setResult('sensors', 'working')} />
+      <TestPageHeader testId="T-09" testKey="sensors" title="Sensors" description="Monitor orientation, acceleration, and multi-touch input in real time." canUndoTest={orientation !== null || motionData !== null || touchDetected || touches.length > 0} onUndoTest={undoTest} />
 
       <div className="grid grid-cols-1 items-start gap-5 lg:grid-cols-[minmax(0,1.08fr)_minmax(20rem,.92fr)]">
         <Card className="instrument-panel">
@@ -172,8 +183,8 @@ export function SensorsTest() {
               {permissionGranted === true && (
                 <div className="relative z-10 flex flex-col items-center text-center">
                   <div className="relative flex h-32 w-24 items-center justify-center rounded-xl border-4 border-foreground/80 bg-card shadow-lg transition-transform duration-100" style={{ transform: `perspective(500px) rotateX(${-(orientation?.beta || 0) / 3}deg) rotateY(${(orientation?.gamma || 0) / 3}deg)` }}><span className="absolute top-2 h-1 w-8 rounded-full bg-foreground/20" /><Move3D className="h-8 w-8 text-primary" /></div>
-                  <p className="mt-5 font-mono text-xs font-semibold uppercase tracking-wide">{orientation ? 'Orientation signal active' : 'Awaiting device movement'}</p>
-                  <p className="mt-2 text-xs text-muted-foreground">Tilt or rotate the device to update readings.</p>
+                  <p className="mt-5 font-mono text-xs font-semibold uppercase tracking-wide">{orientation ? 'Orientation signal active' : 'Awaiting compatible sensor data'}</p>
+                  <p className="mt-2 text-xs text-muted-foreground">Readings remain N/A on devices that do not expose motion sensors.</p>
                 </div>
               )}
             </div>
@@ -183,9 +194,9 @@ export function SensorsTest() {
               <MetricTile label="Gamma / Y" value={degrees(orientation?.gamma)} />
             </div>
             <div className="mt-3 grid grid-cols-3 gap-3">
-              <MetricTile label="Accel X" value={acceleration(motionData?.x)} detail="m/s²" />
-              <MetricTile label="Accel Y" value={acceleration(motionData?.y)} detail="m/s²" />
-              <MetricTile label="Accel Z" value={acceleration(motionData?.z)} detail="m/s²" />
+              <MetricTile label="Accel X" value={acceleration(motionData?.x)} detail={motionData?.x == null ? undefined : 'm/s²'} />
+              <MetricTile label="Accel Y" value={acceleration(motionData?.y)} detail={motionData?.y == null ? undefined : 'm/s²'} />
+              <MetricTile label="Accel Z" value={acceleration(motionData?.z)} detail={motionData?.z == null ? undefined : 'm/s²'} />
             </div>
           </CardContent>
         </Card>
@@ -194,7 +205,7 @@ export function SensorsTest() {
           <Card className="instrument-panel overflow-hidden">
           <CardContent className="flex min-h-[440px] flex-col p-0">
             <div className="flex items-center justify-between border-b border-border/70 px-5 py-4 sm:px-6"><div><h2 className="panel-label">Touch matrix</h2><p className="mt-2 text-sm text-muted-foreground">Place one or more fingers inside the surface.</p></div><span className="readout-value text-sm text-primary">{touches.length}</span></div>
-            <div className="relative min-h-[360px] flex-1"><div className="absolute left-4 top-4 z-10 flex items-center gap-2 rounded-md border border-border/70 bg-card/85 px-3 py-2 font-mono text-[10px] font-semibold uppercase tracking-wider shadow-sm backdrop-blur-md"><Fingerprint className="h-4 w-4 text-primary" /> {touches.length} points</div><canvas ref={canvasRef} className="h-full w-full touch-none bg-background/40" /></div>
+            <div className="relative min-h-[360px] flex-1"><div className="absolute left-4 top-4 z-10 flex items-center gap-2 rounded-md border border-border/70 bg-card/85 px-3 py-2 font-mono text-[10px] font-semibold uppercase tracking-wider shadow-sm backdrop-blur-md"><Fingerprint className="h-4 w-4 text-primary" /> {touchSupported ? `${touches.length} points` : 'N/A'}</div><canvas ref={canvasRef} className="h-full w-full touch-none bg-background/40" /></div>
             </CardContent>
           </Card>
 
@@ -213,7 +224,7 @@ export function SensorsTest() {
               <div className="flex items-center justify-between"><span className="panel-label">Result</span><TestStatusBadge status={results.sensors} /></div>
               <div className="mt-5 grid grid-cols-2 gap-3">
                 <MetricTile label="Detected" value={completedSignals} accent={completedSignals > 0} />
-                <MetricTile label="Touch points" value={touches.length} />
+                <MetricTile label="Touch points" value={touchSupported ? touches.length : 'N/A'} />
               </div>
             </CardContent>
           </Card>

@@ -12,11 +12,13 @@ export function CameraTest() {
   const { results, setResult } = useTestContext();
   const videoRef = useRef<HTMLVideoElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
+  const requestIdRef = useRef(0);
   const [stream, setStream] = useState<MediaStream | null>(null);
   const [devices, setDevices] = useState<MediaDeviceInfo[]>([]);
   const [selectedDeviceId, setSelectedDeviceId] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [videoInfo, setVideoInfo] = useState<{ width: number; height: number } | null>(null);
+  const [hasTestActivity, setHasTestActivity] = useState(false);
 
   const stopStream = () => {
     streamRef.current?.getTracks().forEach((track) => track.stop());
@@ -25,12 +27,18 @@ export function CameraTest() {
   };
 
   const startCamera = async (deviceId?: string) => {
+    setHasTestActivity(true);
     stopStream();
+    const requestId = ++requestIdRef.current;
     setError(null);
     setVideoInfo(null);
     try {
       const constraints: MediaStreamConstraints = { video: deviceId ? { deviceId: { exact: deviceId } } : true };
       const nextStream = await navigator.mediaDevices.getUserMedia(constraints);
+      if (requestId !== requestIdRef.current) {
+        nextStream.getTracks().forEach((track) => track.stop());
+        return;
+      }
       streamRef.current = nextStream;
       setStream(nextStream);
       if (videoRef.current) videoRef.current.srcObject = nextStream;
@@ -40,6 +48,7 @@ export function CameraTest() {
       if (!selectedDeviceId && videoDevices.length > 0) setSelectedDeviceId(videoDevices[0].deviceId);
       setResult('camera', 'working');
     } catch (caught) {
+      if (requestId !== requestIdRef.current) return;
       const message = caught instanceof Error ? caught.message : 'Failed to access camera';
       console.error('Camera access error:', caught);
       setError(message);
@@ -48,6 +57,17 @@ export function CameraTest() {
   };
 
   useEffect(() => () => stopStream(), []);
+
+  const undoTest = () => {
+    requestIdRef.current += 1;
+    stopStream();
+    if (videoRef.current) videoRef.current.srcObject = null;
+    setDevices([]);
+    setSelectedDeviceId('');
+    setError(null);
+    setVideoInfo(null);
+    setHasTestActivity(false);
+  };
 
   const handleLoadedMetadata = () => {
     if (videoRef.current) setVideoInfo({ width: videoRef.current.videoWidth, height: videoRef.current.videoHeight });
@@ -62,10 +82,11 @@ export function CameraTest() {
     <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="test-page mx-auto flex w-full max-w-[90rem] flex-col">
       <TestPageHeader
         testId="T-03"
+        testKey="camera"
         title="Camera"
         description="Verify the live image, framing, resolution, and selected camera."
-        onMarkIssue={() => setResult('camera', 'issue')}
-        onMarkWorking={() => setResult('camera', 'working')}
+        canUndoTest={hasTestActivity}
+        onUndoTest={undoTest}
       />
 
       <div className="grid grid-cols-1 gap-5 lg:grid-cols-[minmax(0,2fr)_minmax(19rem,1fr)]">

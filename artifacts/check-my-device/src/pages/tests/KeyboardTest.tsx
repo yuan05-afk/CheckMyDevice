@@ -66,6 +66,7 @@ const allKeys = [
 const testableCodes = new Set(allKeys.map(({ code }) => code));
 const systemHandledCodes = new Set(['PrintScreen', 'MetaLeft', 'MetaRight', 'ContextMenu', 'Pause']);
 const modifierCodes = new Set(['ShiftLeft', 'ShiftRight', 'ControlLeft', 'ControlRight', 'AltLeft', 'AltRight', 'MetaLeft', 'MetaRight']);
+const AUTO_PASS_KEY_COUNT = 10;
 
 function resolveLayoutCode(event: KeyboardEvent): string | null {
   return testableCodes.has(event.code) ? event.code : null;
@@ -168,6 +169,12 @@ export function KeyboardTest() {
   const totalKeys = testableCodes.size;
   const testedCount = useMemo(() => [...testedCodes].filter((code) => testableCodes.has(code)).length, [testedCodes]);
   const progress = Math.round((testedCount / totalKeys) * 100);
+
+  useEffect(() => {
+    if (testedCount >= AUTO_PASS_KEY_COUNT && results.keyboard === 'untested') {
+      setResult('keyboard', 'working');
+    }
+  }, [testedCount, pressCount]);
   const modifierState = [
     { label: 'Shift', active: heldCodes.has('ShiftLeft') || heldCodes.has('ShiftRight'), detected: testedCodes.has('ShiftLeft') || testedCodes.has('ShiftRight') },
     { label: 'Ctrl', active: heldCodes.has('ControlLeft') || heldCodes.has('ControlRight'), detected: testedCodes.has('ControlLeft') || testedCodes.has('ControlRight') },
@@ -177,14 +184,22 @@ export function KeyboardTest() {
 
   const isKeyHeld = (code: string) => heldCodes.has(code);
 
+  const undoTest = () => {
+    setTestedCodes(new Set());
+    setHeldCodes(new Set());
+    setPressCount(0);
+    setRecentKeys([]);
+  };
+
   return (
     <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="test-page mx-auto flex w-full max-w-[90rem] flex-col">
       <TestPageHeader
         testId="T-01"
+        testKey="keyboard"
         title="Keyboard"
         description="Test a full-size keyboard, including navigation keys, left/right modifiers, and the numpad."
-        onMarkIssue={() => setResult('keyboard', 'issue')}
-        onMarkWorking={() => setResult('keyboard', 'working')}
+        canUndoTest={testedCodes.size > 0 || heldCodes.size > 0 || pressCount > 0 || recentKeys.length > 0}
+        onUndoTest={undoTest}
       />
 
       <div className="mb-5 grid items-start gap-4 md:grid-cols-3">

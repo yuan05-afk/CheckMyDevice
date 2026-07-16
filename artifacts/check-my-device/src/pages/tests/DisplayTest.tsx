@@ -43,6 +43,11 @@ export function DisplayTest() {
     } catch { /* already exited */ }
   };
 
+  const undoTest = () => {
+    setTestedPatterns(new Set());
+    void exitFullscreen();
+  };
+
   useEffect(() => {
     const handleFullscreenChange = () => {
       if (!document.fullscreenElement && !(document as Document & { webkitFullscreenElement?: Element }).webkitFullscreenElement) setActivePatternId(null);
@@ -68,7 +73,7 @@ export function DisplayTest() {
       </AnimatePresence>
 
       <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="test-page mx-auto flex w-full max-w-[90rem] flex-col">
-        <TestPageHeader testId="T-06" title="Display" description="Inspect solid colors, gradients, contrast, and pixel sharpness." onMarkIssue={() => setResult('display', 'issue')} onMarkWorking={() => setResult('display', 'working')} />
+        <TestPageHeader testId="T-06" testKey="display" title="Display" description="Inspect solid colors, gradients, contrast, and pixel sharpness." canUndoTest={testedPatterns.size > 0 || activePatternId !== null} onUndoTest={undoTest} />
 
         <div className="grid grid-cols-1 gap-5 lg:grid-cols-[minmax(0,2fr)_minmax(19rem,1fr)]">
           <Card className="instrument-panel">

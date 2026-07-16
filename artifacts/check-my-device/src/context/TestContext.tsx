@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
+import { createContext, useCallback, useContext, useEffect, useState, ReactNode } from 'react';
 
 export type TestStatus = 'untested' | 'working' | 'issue' | 'unsupported';
 export type TestId = 'keyboard' | 'mouse' | 'camera' | 'microphone' | 'speaker' | 'display' | 'battery' | 'network' | 'sensors';
@@ -6,6 +6,7 @@ export type TestId = 'keyboard' | 'mouse' | 'camera' | 'microphone' | 'speaker' 
 interface TestContextType {
   results: Record<TestId, TestStatus>;
   setResult: (id: TestId, status: TestStatus) => void;
+  resetResult: (id: TestId) => void;
   resetAll: () => void;
 }
 
@@ -21,35 +22,39 @@ const defaultResults: Record<TestId, TestStatus> = {
   sensors: 'untested',
 };
 
+function loadStoredResults(): Record<TestId, TestStatus> {
+  try {
+    const stored = localStorage.getItem('checkmydevice-results');
+    if (stored) return { ...defaultResults, ...JSON.parse(stored) };
+  } catch (error) {
+    console.error('Failed to parse stored results', error);
+  }
+  return defaultResults;
+}
+
 const TestContext = createContext<TestContextType | undefined>(undefined);
 
 export function TestProvider({ children }: { children: ReactNode }) {
-  const [results, setResults] = useState<Record<TestId, TestStatus>>(() => {
-    try {
-      const stored = localStorage.getItem('checkmydevice-results');
-      if (stored) {
-        return JSON.parse(stored);
-      }
-    } catch (e) {
-      console.error('Failed to parse stored results', e);
-    }
-    return defaultResults;
-  });
+  const [results, setResults] = useState<Record<TestId, TestStatus>>(loadStoredResults);
 
   useEffect(() => {
     localStorage.setItem('checkmydevice-results', JSON.stringify(results));
   }, [results]);
 
-  const setResult = (id: TestId, status: TestStatus) => {
-    setResults((prev) => ({ ...prev, [id]: status }));
-  };
+  const setResult = useCallback((id: TestId, status: TestStatus) => {
+    setResults((previous) => ({ ...previous, [id]: status }));
+  }, []);
 
-  const resetAll = () => {
+  const resetResult = useCallback((id: TestId) => {
+    setResults((previous) => ({ ...previous, [id]: 'untested' }));
+  }, []);
+
+  const resetAll = useCallback(() => {
     setResults(defaultResults);
-  };
+  }, []);
 
   return (
-    <TestContext.Provider value={{ results, setResult, resetAll }}>
+    <TestContext.Provider value={{ results, setResult, resetResult, resetAll }}>
       {children}
     </TestContext.Provider>
   );
