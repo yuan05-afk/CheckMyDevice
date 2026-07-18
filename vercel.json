@@ -45,9 +45,102 @@
           "value": "none"
         }
       ]
+    },
+    {
+      "source": "/network-measurement/(.*)",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "no-store, no-cache, must-revalidate"
+        },
+        {
+          "key": "x-vercel-enable-rewrite-caching",
+          "value": "0"
+        }
+      ]
     }
   ],
   "rewrites": [
+    {
+      "source": "/network-measurement/latency",
+      "destination": "https://speed.cloudflare.com/__down?bytes=0",
+      "missing": [
+        {
+          "type": "query",
+          "key": "bytes"
+        }
+      ]
+    },
+    {
+      "source": "/network-measurement/100000",
+      "destination": "https://speed.cloudflare.com/__down?bytes=100000",
+      "missing": [
+        {
+          "type": "query",
+          "key": "bytes"
+        }
+      ]
+    },
+    {
+      "source": "/network-measurement/500000",
+      "destination": "https://speed.cloudflare.com/__down?bytes=500000",
+      "missing": [
+        {
+          "type": "query",
+          "key": "bytes"
+        }
+      ]
+    },
+    {
+      "source": "/network-measurement/1000000",
+      "destination": "https://speed.cloudflare.com/__down?bytes=1000000",
+      "missing": [
+        {
+          "type": "query",
+          "key": "bytes"
+        }
+      ]
+    },
+    {
+      "source": "/network-measurement/2000000",
+      "destination": "https://speed.cloudflare.com/__down?bytes=2000000",
+      "missing": [
+        {
+          "type": "query",
+          "key": "bytes"
+        }
+      ]
+    },
+    {
+      "source": "/network-measurement/5000000",
+      "destination": "https://speed.cloudflare.com/__down?bytes=5000000",
+      "missing": [
+        {
+          "type": "query",
+          "key": "bytes"
+        }
+      ]
+    },
+    {
+      "source": "/network-measurement/10000000",
+      "destination": "https://speed.cloudflare.com/__down?bytes=10000000",
+      "missing": [
+        {
+          "type": "query",
+          "key": "bytes"
+        }
+      ]
+    },
+    {
+      "source": "/network-measurement/20000000",
+      "destination": "https://speed.cloudflare.com/__down?bytes=20000000",
+      "missing": [
+        {
+          "type": "query",
+          "key": "bytes"
+        }
+      ]
+    },
     {
       "source": "/(.*)",
       "destination": "/index.html"

@@ -1,84 +1,154 @@
 # CheckMyDevice
 
-CheckMyDevice is a private, browser-based checklist for testing a new PC or laptop's input and output hardware. It runs entirely with native web APIs, requires no account or backend, and keeps diagnostic results only in the browser's `localStorage`.
+### Nine hardware checks. One browser tab. Nothing uploaded.
 
-<!-- Screenshot placeholder: replace with an image of the diagnostics dashboard. -->
+Buying a device, troubleshooting a peripheral, or checking a repair should not require installing a mystery utility. CheckMyDevice turns a modern browser into a focused diagnostic bench for the keyboard, mouse or trackpad, camera, microphone, speakers, display, battery, network, and sensors.
 
-> **Screenshot:** CheckMyDevice dashboard (coming soon)
+Every diagnostic is guided, responsive, and privacy-first. Hardware readings are processed in the current browser tab, protected access is requested only when needed, and test statuses stay in that browser's `localStorage`. There is no account, application download, browser extension, analytics tracker, or diagnostic database.
 
-## Hardware tests
+**[Open CheckMyDevice](https://checkmydevice.vercel.app/)** | [Explore the diagnostics](#diagnostic-modules) | [Read the privacy model](#privacy-model)
 
-The dashboard provides nine guided checks:
+<!-- Replace this placeholder with the final landing-page image, for example: ![CheckMyDevice landing page](docs/images/checkmydevice-landing.png) -->
 
-1. **Keyboard (T-01)** — verify key input.
-2. **Mouse & Trackpad (T-02)** — check pointer movement, clicks, and scrolling.
-3. **Camera (T-03)** — preview available cameras through MediaDevices.
-4. **Microphone (T-04)** — request access and visualize audio input.
-5. **Speaker (T-05)** — play test audio and confirm output.
-6. **Display (T-06)** — inspect the screen with visual test patterns.
-7. **Battery (T-07)** — report battery and charging information when exposed by the browser.
-8. **Network (T-08)** — inspect online state and available connection information.
-9. **Sensors (T-09)** — observe device orientation and motion events when supported.
+> **Landing-page screenshot placeholder**
+>
+> Add a full-width screenshot of the CheckMyDevice home page here.
 
-Each result is untested, working, issue, or unsupported. Results Summary combines all nine checks into a local report. Support and permission behavior vary by browser, operating system, and hardware; unsupported is valid when an API is unavailable.
+## Why CheckMyDevice
 
-## Local setup
+- **Nine focused diagnostics:** Test keyboard, mouse or trackpad, camera, microphone, speakers, display, battery, network, and device sensors.
+- **Privacy-first execution:** Camera previews, microphone samples, key events, pointer events, and sensor readings are not uploaded to an application server.
+- **Permission-aware:** Camera, microphone, mouse, battery, network, and sensor tests start only after a deliberate user action.
+- **Useful live evidence:** Each test provides responsive metrics, visual feedback, and a clear working, issue, unsupported, or untested result.
+- **No installation:** Run the suite from a modern browser on localhost or HTTPS.
+- **No account or tracking:** The shipped frontend has no authentication, analytics, advertising SDK, cookies, or remote diagnostic service.
+- **Responsive interface:** The diagnostic workspace supports desktop, tablet, and mobile layouts, plus light and dark themes.
 
-Prerequisites:
+## Diagnostic modules
+
+| ID | Test | What it verifies |
+| --- | --- | --- |
+| T-01 | Keyboard | Full-size physical key codes, function row, navigation cluster, left and right modifiers, arrow keys, and numpad coverage. Operating-system-reserved keys are identified honestly. |
+| T-02 | Mouse & Trackpad | Pointer movement, primary and secondary clicks, middle click, and scrolling inside an explicitly started test surface. |
+| T-03 | Camera | User-selected camera source, live local preview, stream state, aspect ratio, and reported resolution. A visible Stop Camera control releases the active stream. |
+| T-04 | Microphone | Live waveform, current level, peak level, and a five-second playback sample held temporarily in tab memory. |
+| T-05 | Speaker | Left, right, and stereo output, real-time test volume, frequency sweep, reference melody, and reference chord. Audio is generated locally with the Web Audio API. |
+| T-06 | Display | Solid colors, black and white, gradient banding, sharpness grid, and checkerboard rendering in an optional fullscreen inspection view. |
+| T-07 | Battery | Browser-reported charge level, charging state, time estimate, live events, and one-second telemetry checks when the Battery API is available. |
+| T-08 | Network | Online state, external reachability, latency, jitter, and sustained download throughput measured against Cloudflare's speed-test endpoint. |
+| T-09 | Sensors | Device orientation, acceleration, and multi-touch input after the user starts the test. Unsupported readings remain `N/A`. |
+
+The dashboard tracks each module as `untested`, `working`, `issue`, or `unsupported`. The report page summarizes all nine results locally.
+
+## Privacy model
+
+CheckMyDevice is designed around data minimization.
+
+| Data or capability | Handling |
+| --- | --- |
+| Camera | The live `MediaStream` is attached only to the local preview element. It is not recorded or uploaded. The stream is stopped when requested or when the test page exits. |
+| Microphone | The first five seconds are stored as a temporary in-memory Blob URL for local playback. The sample is revoked when replaced or when the page exits. It is never written to `localStorage`. |
+| Keyboard and mouse | Browser events are evaluated in the active test page. Raw event histories are not sent to a server. |
+| Speaker | Test tones are synthesized locally. No remote audio file is required. |
+| Display, battery, and sensors | Readings and interactions remain in component memory. Only the final test status is persisted. |
+| Test results | Status values are validated and saved under `checkmydevice-results` in `localStorage`. They are not synchronized. |
+| Network test | Starts only after a click and may download up to 100 MB from Cloudflare. It first connects directly, then uses a fixed-size same-site Vercel relay if a browser or privacy shield blocks the cross-origin stream. No downloaded file is retained. Cloudflare and, when the relay is used, Vercel receive the normal metadata associated with those requests. |
+| Fonts | The current build requests font styles and files from Google Fonts. No hardware diagnostic readings are included in those requests. |
+
+Camera and microphone permission duration is controlled by the browser. A browser may remember a previous decision for the site. Reset All clears CheckMyDevice's saved result statuses, but websites cannot revoke browser permissions programmatically. Users can review or revoke remembered permissions from the browser's site settings.
+
+## Security controls
+
+The included Vercel configuration applies production response headers that:
+
+- restrict executable scripts and outbound connections with Content Security Policy;
+- allow camera, microphone, motion sensors, and fullscreen only for the application itself;
+- disable unused capabilities such as geolocation, display capture, USB, serial, HID, payment, and local-network access;
+- prevent the application from being embedded in another site, reducing clickjacking risk;
+- enforce HTTPS, MIME-type protection, origin isolation, and a no-referrer policy.
+
+Protected media requests are cancelled when their page exits. The project also preserves pnpm's `minimumReleaseAge: 1440` setting as a supply-chain safeguard.
+
+No public web application can promise absolute security. Please report a suspected vulnerability privately through a [GitHub Security Advisory](https://github.com/yuan05-afk/CheckMyDevice/security/advisories/new). Do not include sensitive findings in a public issue.
+
+## Browser requirements and limitations
+
+- Use a current version of Chrome, Edge, Firefox, or Safari.
+- Camera, microphone, and several sensor APIs require HTTPS or localhost.
+- Browser, operating-system, and hardware support varies. `unsupported` is a valid diagnostic result.
+- Laptop `Fn` keys are commonly handled by firmware and may not emit a browser keyboard event.
+- Operating-system shortcuts such as the Windows key or Print Screen may be intercepted before the browser receives them.
+- Battery and Network Information APIs are not exposed by every browser and may report limited or approximate values.
+- Hardware diagnostics can indicate browser-observable behavior, but they cannot replace manufacturer service tools or electrical testing equipment.
+
+## Run locally
+
+### Prerequisites
 
 - Node.js 22.12 or newer
-- pnpm (npm and Yarn are intentionally rejected)
+- pnpm 10.34.4 or a compatible pnpm 10 release
 
-From the repository root:
+This workspace intentionally rejects npm and Yarn.
+
+### Clone, install, and start
+
+Clone the repository, then install and start the application:
 
 ```sh
+git clone https://github.com/yuan05-afk/CheckMyDevice.git
+cd CheckMyDevice
 pnpm install --frozen-lockfile
 pnpm dev
 ```
 
-Open `http://localhost:5173`. Use localhost or HTTPS so permission-gated APIs have a secure context.
-The default port is 5173. Override it only when needed, for example
-`$env:PORT='4173'; pnpm dev` in PowerShell.
+Open `http://localhost:5173`.
 
-## Production build
+The development server defaults to port `5173`. Override it only when needed.
+
+PowerShell:
+
+```powershell
+$env:PORT = '4173'
+pnpm dev
+```
+
+POSIX shell:
+
+```sh
+PORT=4173 pnpm dev
+```
+
+## Quality checks
+
+Validate the local application with:
+
+```sh
+pnpm --filter @workspace/check-my-device run typecheck
+pnpm --filter @workspace/check-my-device run build
+```
+
+The equivalent root product build is:
 
 ```sh
 pnpm run build:app
-pnpm preview
 ```
 
-Static output is written to `artifacts/check-my-device/dist/public/`. Set `BASE_PATH` to its deployment URL prefix, such as `/` for a domain root.
+Production output is written to `artifacts/check-my-device/dist/public/`.
 
-## Deploy to Vercel
+The root `pnpm run build` also checks workspace scaffolds that are not part of the shipped application. For product-only work, prefer the filtered frontend commands above.
 
-Import the GitHub repository into Vercel and keep the repository root as the
-project root. The included `vercel.json` installs with pnpm, builds only the
-CheckMyDevice frontend, publishes its static output, and supports client-side
-routes such as `/dashboard` and `/test/camera`.
+## Technology
 
-Useful validation commands:
+- React 19 and TypeScript
+- Vite 7
+- Tailwind CSS 4
+- shadcn/ui and Radix UI primitives
+- Framer Motion
+- Wouter
+- Web APIs including MediaDevices, MediaRecorder, Web Audio, Fullscreen, Battery Status, Network Information, Device Orientation, Device Motion, and Touch Events
 
-```sh
-pnpm run typecheck
-pnpm run build:app
-```
+## License
 
-The root build includes scaffold packages. For product work, the filtered frontend build is faster and more representative.
+This project is licensed under the MIT License.
 
-## Tech stack
-
-- Vite, React 19, and TypeScript
-- Tailwind CSS with shadcn/ui and Radix primitives
-- Wouter routing
-- Framer Motion animation
-- next-themes light/dark mode
-- TanStack Query (configured, not connected to a real API)
-- MediaDevices, Web Audio, Battery Status, Network Information, and device motion/orientation APIs
-
-## Repository layout
-
-The production app lives in `artifacts/check-my-device/`. The API server, database libraries, API schema/generated clients, and mockup sandbox are retained scaffolding and are not part of the current runtime. See `AGENTS.md` for the detailed workspace map and commands.
-
-## Privacy
-
-Hardware checks execute locally. CheckMyDevice does not upload recordings, camera images, or results, and the current frontend does not call a backend. Clearing site storage removes saved results.
+<sub>Created by Yuan Mariano.</sub>

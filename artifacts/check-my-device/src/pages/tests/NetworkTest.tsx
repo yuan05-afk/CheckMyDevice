@@ -11,6 +11,7 @@ import { MetricTile, PanelHeading, TestStatusBadge } from '@/components/Diagnost
 type ConnectionInfo = { type?: string; effectiveType?: string; downlink?: number; rtt?: number; saveData?: boolean };
 type NetworkConnectionLike = ConnectionInfo & { addEventListener: (name: string, listener: () => void) => void; removeEventListener: (name: string, listener: () => void) => void };
 type SpeedPhase = 'idle' | 'latency' | 'download' | 'validation' | 'complete';
+type MeasurementRoute = 'direct' | 'same-origin';
 type SpeedTestState = {
   status: 'idle' | 'running' | 'done' | 'error';
   phase: SpeedPhase;
@@ -22,12 +23,15 @@ type SpeedTestState = {
   transferredBytes: number;
   elapsedMs: number;
   samples: number;
+  route: MeasurementRoute | null;
   error?: string;
 };
 
 type DownloadMeasurement = { bytes: number; durationMs: number; mbps: number };
 
-const DOWNLOAD_ENDPOINT = 'https://speed.cloudflare.com/__down';
+const DIRECT_DOWNLOAD_ENDPOINT = 'https://speed.cloudflare.com/__down';
+const SAME_ORIGIN_MEASUREMENT_PREFIX = '/network-measurement';
+const PROXY_DOWNLOAD_SIZES = [100_000, 500_000, 1_000_000, 2_000_000, 5_000_000, 10_000_000, 20_000_000] as const;
 const LATENCY_SAMPLE_COUNT = 6;
 const MIN_TEST_DURATION_MS = 6000;
 const MIN_DOWNLOAD_DURATION_MS = 5000;
@@ -46,7 +50,18 @@ const initialSpeedTest: SpeedTestState = {
   transferredBytes: 0,
   elapsedMs: 0,
   samples: 0,
+  route: null,
 };
+
+function isAbortError(error: unknown) {
+  return error instanceof DOMException && error.name === 'AbortError';
+}
+
+function closestProxyDownloadSize(requestedBytes: number) {
+  return PROXY_DOWNLOAD_SIZES.reduce((closest, size) => (
+    Math.abs(size - requestedBytes) < Math.abs(closest - requestedBytes) ? size : closest
+  ));
+}
 
 function percentile(values: number[], fraction: number) {
   if (values.length === 0) return 0;
@@ -120,52 +135,105 @@ export function NetworkTest() {
     const testStartedAt = performance.now();
     const latencySamples: number[] = [];
     const downloadSamples: DownloadMeasurement[] = [];
+    const measurementId = crypto.randomUUID();
     let transferredBytes = 0;
+    let measurementRoute: MeasurementRoute = 'direct';
 
-    setSpeedTest({ ...initialSpeedTest, status: 'running', phase: 'latency' });
+    setSpeedTest({ ...initialSpeedTest, status: 'running', phase: 'latency', route: measurementRoute });
 
     const updateElapsed = () => performance.now() - testStartedAt;
+    const measurementUrl = (requestedBytes: number, route: MeasurementRoute) => {
+      const requestId = crypto.randomUUID();
+      if (route === 'direct') {
+        return `${DIRECT_DOWNLOAD_ENDPOINT}?bytes=${requestedBytes}&measId=${measurementId}&r=${requestId}`;
+      }
+      const path = requestedBytes === 0 ? 'latency' : closestProxyDownloadSize(requestedBytes);
+      return `${SAME_ORIGIN_MEASUREMENT_PREFIX}/${path}?measId=${measurementId}&r=${requestId}`;
+    };
+    const useSameOriginRoute = () => {
+      measurementRoute = 'same-origin';
+      setSpeedTest((previous) => ({ ...previous, route: measurementRoute, liveMbps: null }));
+    };
+    const fetchMeasurement = async (requestedBytes: number) => {
+      const request = async (route: MeasurementRoute) => {
+        const response = await fetch(measurementUrl(requestedBytes, route), { cache: 'no-store', signal });
+        if (!response.ok) throw new Error(`The measurement service returned HTTP ${response.status}`);
+        if (!response.headers.get('content-type')?.includes('application/octet-stream')) {
+          throw new Error('The measurement service returned an unexpected response');
+        }
+        return response;
+      };
+
+      const requestSameOrigin = async () => {
+        try {
+          return await request('same-origin');
+        } catch (error) {
+          if (isAbortError(error)) throw error;
+          await wait(150, signal);
+          return request('same-origin');
+        }
+      };
+
+      if (measurementRoute === 'same-origin') return requestSameOrigin();
+      try {
+        return await request('direct');
+      } catch (error) {
+        if (isAbortError(error)) throw error;
+        useSameOriginRoute();
+        return requestSameOrigin();
+      }
+    };
     const measureLatency = async () => {
       const startedAt = performance.now();
-      const response = await fetch(`${DOWNLOAD_ENDPOINT}?bytes=0&r=${crypto.randomUUID()}`, { cache: 'no-store', signal });
-      if (!response.ok) throw new Error('The measurement server did not accept the latency request');
+      const response = await fetchMeasurement(0);
       await response.arrayBuffer();
       return performance.now() - startedAt;
     };
 
     const measureDownload = async (requestedBytes: number) => {
-      const startedAt = performance.now();
-      const response = await fetch(`${DOWNLOAD_ENDPOINT}?bytes=${requestedBytes}&r=${crypto.randomUUID()}`, { cache: 'no-store', signal });
-      if (!response.ok) throw new Error('The measurement server did not accept the download request');
-      const reader = response.body?.getReader();
-      if (!reader) throw new Error('Streaming downloads are unavailable in this browser');
-      let receivedBytes = 0;
-      let lastUiUpdate = startedAt;
+      const readSample = async () => {
+        const startedAt = performance.now();
+        const response = await fetchMeasurement(requestedBytes);
+        const reader = response.body?.getReader();
+        if (!reader) throw new Error('Streaming downloads are unavailable in this browser');
+        let receivedBytes = 0;
+        let lastUiUpdate = startedAt;
 
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-        receivedBytes += value.byteLength;
-        const now = performance.now();
-        if (now - lastUiUpdate >= 100) {
-          const durationMs = Math.max(1, now - startedAt);
-          const liveMbps = (receivedBytes * 8) / durationMs / 1000;
-          setSpeedTest((previous) => ({
-            ...previous,
-            liveMbps: Number(liveMbps.toFixed(1)),
-            transferredBytes: transferredBytes + receivedBytes,
-            elapsedMs: updateElapsed(),
-          }));
-          lastUiUpdate = now;
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          receivedBytes += value.byteLength;
+          const now = performance.now();
+          if (now - lastUiUpdate >= 100) {
+            const durationMs = Math.max(1, now - startedAt);
+            const liveMbps = (receivedBytes * 8) / durationMs / 1000;
+            setSpeedTest((previous) => ({
+              ...previous,
+              liveMbps: Number(liveMbps.toFixed(1)),
+              transferredBytes: transferredBytes + receivedBytes,
+              elapsedMs: updateElapsed(),
+            }));
+            lastUiUpdate = now;
+          }
         }
-      }
 
-      const durationMs = Math.max(1, performance.now() - startedAt);
-      return {
-        bytes: receivedBytes,
-        durationMs,
-        mbps: (receivedBytes * 8) / durationMs / 1000,
+        if (receivedBytes === 0) throw new Error('The measurement service returned an empty download sample');
+        const durationMs = Math.max(1, performance.now() - startedAt);
+        return {
+          bytes: receivedBytes,
+          durationMs,
+          mbps: (receivedBytes * 8) / durationMs / 1000,
+        };
       };
+
+      try {
+        return await readSample();
+      } catch (error) {
+        if (isAbortError(error)) throw error;
+        if (measurementRoute === 'direct') useSameOriginRoute();
+        await wait(150, signal);
+        return readSample();
+      }
     };
 
     try {
@@ -252,6 +320,7 @@ export function NetworkTest() {
         transferredBytes,
         elapsedMs: updateElapsed(),
         samples: downloadSamples.length,
+        route: measurementRoute,
       });
       setResult('network', 'working');
     } catch (caught) {
@@ -259,10 +328,12 @@ export function NetworkTest() {
       setSpeedTest((previous) => ({
         ...previous,
         status: 'error',
-        error: caught instanceof Error ? caught.message : 'The network measurement failed',
+        error: caught instanceof TypeError || (caught instanceof Error && caught.message === 'Failed to fetch')
+          ? 'The browser blocked both measurement routes. Check privacy shields or content blockers, then retry.'
+          : caught instanceof Error ? caught.message : 'The network measurement failed',
         elapsedMs: updateElapsed(),
       }));
-      setResult('network', 'issue');
+      setResult('network', navigator.onLine ? 'unsupported' : 'issue');
     } finally {
       if (speedTestControllerRef.current === controller) speedTestControllerRef.current = null;
     }
@@ -280,6 +351,7 @@ export function NetworkTest() {
   const measuredLatency = speedTest.latencyMs != null ? `${speedTest.latencyMs} ms` : null;
   const browserLatency = connectionInfo?.rtt != null ? `${connectionInfo.rtt} ms est.` : 'N/A';
   const reachability = speedTest.status === 'done' ? 'Verified' : speedTest.status === 'running' ? 'Testing' : speedTest.status === 'error' ? 'Failed' : 'Not tested';
+  const measurementRouteLabel = speedTest.route === 'same-origin' ? 'Same-site relay' : speedTest.route === 'direct' ? 'Direct' : 'Not started';
   const phaseLabel = speedTest.phase === 'latency'
     ? 'Measuring idle latency'
     : speedTest.phase === 'download'
@@ -323,7 +395,7 @@ export function NetworkTest() {
                   <div className="relative z-10 w-full text-center">
                     <Gauge className="mx-auto h-7 w-7 text-primary" />
                     <p className="mt-3 font-mono text-xs font-semibold uppercase tracking-wide">Ready to measure</p>
-                    <p className="mt-2 text-xs leading-relaxed text-muted-foreground">Runs for at least 6 seconds and may download up to 100 MB from Cloudflare. No file is retained.</p>
+                    <p className="mt-2 text-xs leading-relaxed text-muted-foreground">Runs for at least 6 seconds and may download up to 100 MB from Cloudflare. A same-site relay is used automatically if the direct stream is blocked. No file is retained.</p>
                     <Button onClick={runSpeedTest} disabled={!isOnline} className="mt-5 h-11 w-full gap-2 font-semibold"><Download className="h-4 w-4 shrink-0" /> Start Network Test</Button>
                   </div>
                 )}
@@ -358,7 +430,7 @@ export function NetworkTest() {
                 {speedTest.status === 'error' && (
                   <div className="relative z-10 w-full text-center">
                     <WifiOff className="mx-auto h-7 w-7 text-status-warn" />
-                    <p className="mt-3 font-semibold text-status-warn">Measurement interrupted</p>
+                    <p className="mt-3 font-semibold text-status-warn">Measurement unavailable</p>
                     <p className="mt-2 text-xs text-muted-foreground">{speedTest.error}</p>
                     <Button onClick={runSpeedTest} variant="outline" disabled={!isOnline} className="mt-5 h-10 w-full font-semibold">Retry</Button>
                   </div>
@@ -375,6 +447,7 @@ export function NetworkTest() {
                 <div className="flex items-center justify-between text-sm"><span className="flex items-center gap-2 text-muted-foreground"><Globe2 className="h-4 w-4" /> Browser downlink estimate</span><span className="readout-value text-xs">{connectionInfo?.downlink != null ? `${connectionInfo.downlink} Mbps` : 'N/A'}</span></div>
                 <div className="flex items-center justify-between text-sm"><span className="flex items-center gap-2 text-muted-foreground"><Radio className="h-4 w-4" /> Data saver</span><span className="readout-value text-xs">{connectionInfo ? connectionInfo.saveData ? 'On' : 'Off' : 'N/A'}</span></div>
                 <div className="flex items-center justify-between text-sm"><span className="flex items-center gap-2 text-muted-foreground"><Timer className="h-4 w-4" /> Test duration</span><span className="readout-value text-xs">{speedTest.status === 'done' ? `${(speedTest.elapsedMs / 1000).toFixed(1)}s` : 'N/A'}</span></div>
+                <div className="flex items-center justify-between text-sm"><span className="flex items-center gap-2 text-muted-foreground"><Download className="h-4 w-4" /> Measurement route</span><span className="readout-value text-xs">{measurementRouteLabel}</span></div>
               </div>
             </CardContent>
           </Card>

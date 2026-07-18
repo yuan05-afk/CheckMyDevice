@@ -27,6 +27,7 @@ import {
   type LucideIcon,
 } from 'lucide-react';
 import { AppTopbar } from '@/components/AppTopbar';
+import { CreatorCredit } from '@/components/CreatorCredit';
 import { Button } from '@/components/ui/button';
 import diagnosticHero from '@/assets/diagnostic-hero-light-devices-v1.png';
 import diagnosticHeroNight from '@/assets/diagnostic-hero-night-v2.png';
@@ -805,9 +806,13 @@ export function LandingPage() {
             <Activity className="h-4 w-4 text-primary" strokeWidth={2} />
             <span className="font-display text-sm font-semibold tracking-tight text-foreground">CheckMyDevice</span>
           </a>
-          <p className="text-xs text-muted-foreground">
-            Some tests require browser permissions. Results may vary by browser and platform.
-          </p>
+          <div className="flex flex-wrap items-center justify-center gap-x-2 gap-y-1 text-center sm:justify-end sm:text-right">
+            <p className="text-xs text-muted-foreground">
+              Some tests require browser permissions. Results may vary by browser and platform.
+            </p>
+            <span aria-hidden="true" className="hidden text-[10px] text-muted-foreground/35 sm:inline">/</span>
+            <CreatorCredit />
+          </div>
         </div>
       </footer>
     </div>

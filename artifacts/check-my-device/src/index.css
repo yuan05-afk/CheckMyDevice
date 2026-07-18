@@ -247,13 +247,14 @@
 }
 
 .hero-gradient-text {
-  color: hsl(var(--foreground));
+  color: hsl(var(--primary));
   background-image: linear-gradient(
     105deg,
-    hsl(var(--foreground)) 5%,
-    hsl(var(--primary)) 42%,
-    hsl(199 80% 48%) 62%,
-    hsl(var(--foreground)) 95%
+    hsl(var(--primary)) 5%,
+    hsl(var(--primary) / 0.76) 32%,
+    hsl(var(--primary)) 50%,
+    hsl(var(--primary) / 0.72) 68%,
+    hsl(var(--primary)) 95%
   );
   background-size: 250% auto;
   background-clip: text;
