@@ -6,7 +6,7 @@ Buying a device, troubleshooting a peripheral, or checking a repair should not r
 
 Every diagnostic is guided, responsive, and privacy-first. Hardware readings are processed in the current browser tab, protected access is requested only when needed, and test statuses stay in that browser's `localStorage`. There is no account, application download, browser extension, analytics tracker, or diagnostic database.
 
-**[Open CheckMyDevice](https://checkmydevice.vercel.app/)** | [Explore the diagnostics](#diagnostic-modules) | [Read the privacy model](#privacy-model)
+**Deployed domain:** [https://checkmydevice.vercel.app/](https://checkmydevice.vercel.app/) | [Explore the diagnostics](#diagnostic-modules) | [Read the privacy model](#privacy-model)
 
 ![CheckMyDevice landing page showing the privacy-first hardware diagnostic suite](docs/images/checkmydevice-landing.png)
 
