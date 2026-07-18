@@ -142,7 +142,7 @@ export function ResultsSummary() {
           <div>
             <p className="text-sm text-muted-foreground leading-relaxed">
               {untested > 0
-                ? `${untested} test${untested > 1 ? 's' : ''} still pending — run them for a complete report.`
+                ? `${untested} test${untested > 1 ? 's' : ''} still pending. Run them for a complete report.`
                 : failed > 0
                   ? `Issues detected in ${failed} component${failed > 1 ? 's' : ''}. Review each test for details.`
                   : 'All supported components passed successfully.'}

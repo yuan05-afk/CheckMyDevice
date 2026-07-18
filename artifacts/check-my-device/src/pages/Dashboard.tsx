@@ -117,7 +117,7 @@ export function Dashboard() {
               Progress
             </span>
             <span className="font-mono text-[10px] tracking-[0.14em] text-primary">
-              {completedTests}/{totalTests} — {Math.round(progressPercent)}%
+              {completedTests}/{totalTests} · {Math.round(progressPercent)}%
             </span>
           </div>
           <Progress value={progressPercent} className="h-[3px] bg-secondary" />

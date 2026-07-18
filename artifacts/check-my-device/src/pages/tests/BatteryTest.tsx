@@ -134,7 +134,7 @@ export function BatteryTest() {
   };
 
   const percent = batteryState ? Math.round(batteryState.level * 100) : 0;
-  const estimate = batteryState ? formatTime(batteryState.charging ? batteryState.chargingTime : batteryState.dischargingTime) : '—';
+  const estimate = batteryState ? formatTime(batteryState.charging ? batteryState.chargingTime : batteryState.dischargingTime) : 'N/A';
   const levelColor = percent <= 20 ? 'bg-status-warn' : batteryState?.charging ? 'bg-status-pass' : 'bg-primary';
   const secondsSinceChange = lastChangedAt && lastCheckedAt ? Math.max(0, Math.floor((lastCheckedAt - lastChangedAt) / 1000)) : null;
   const freshnessDetail = lastCheckedAt ? 'Checked less than 1s ago' : 'Waiting for first reading';
@@ -187,8 +187,8 @@ export function BatteryTest() {
               ) : <WaitingReadout title="Reading battery" detail="Waiting for browser telemetry" />}
             </div>
             <div className="mt-5 grid grid-cols-3 gap-3">
-              <MetricTile label="Level" value={batteryState ? `${percent}%` : '—'} accent={Boolean(batteryState)} />
-              <MetricTile label="Source" value={batteryState ? batteryState.charging ? 'AC reported' : 'Battery' : '—'} />
+              <MetricTile label="Level" value={batteryState ? `${percent}%` : 'N/A'} accent={Boolean(batteryState)} />
+              <MetricTile label="Source" value={batteryState ? batteryState.charging ? 'AC reported' : 'Battery' : 'N/A'} />
               <MetricTile label="Estimate" value={estimate} />
             </div>
           </CardContent>

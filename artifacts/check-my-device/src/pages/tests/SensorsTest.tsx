@@ -22,21 +22,22 @@ export function SensorsTest() {
   const touchesRef = useRef<TouchPoint[]>([]);
   const touchSupported = navigator.maxTouchPoints > 0;
 
-  useEffect(() => {
-    const OrientationEvent = DeviceOrientationEvent as typeof DeviceOrientationEvent & { requestPermission?: () => Promise<string> };
-    if (typeof OrientationEvent.requestPermission === 'function') setPermissionGranted(null);
-    else if (window.DeviceOrientationEvent) setPermissionGranted(true);
-    else setPermissionGranted(false);
-  }, []);
-
   const requestPermission = async () => {
-    const OrientationEvent = DeviceOrientationEvent as typeof DeviceOrientationEvent & { requestPermission?: () => Promise<string> };
-    if (typeof OrientationEvent.requestPermission !== 'function') {
+    const hasMotionApi = 'DeviceOrientationEvent' in window || 'DeviceMotionEvent' in window;
+    if (!hasMotionApi && !touchSupported) {
+      setPermissionGranted(false);
+      setResult('sensors', 'unsupported');
+      return;
+    }
+
+    const OrientationEvent = window.DeviceOrientationEvent as (typeof DeviceOrientationEvent & { requestPermission?: () => Promise<string> }) | undefined;
+    const requestMotionPermission = OrientationEvent?.requestPermission;
+    if (typeof requestMotionPermission !== 'function') {
       setPermissionGranted(true);
       return;
     }
     try {
-      const permission = await OrientationEvent.requestPermission();
+      const permission = await requestMotionPermission.call(OrientationEvent);
       setPermissionGranted(permission === 'granted');
       if (permission !== 'granted') setResult('sensors', 'issue');
     } catch {
@@ -88,10 +89,12 @@ export function SensorsTest() {
     };
     window.addEventListener('resize', resizeCanvas);
     resizeCanvas();
-    canvas.addEventListener('touchstart', updateTouches, { passive: false });
-    canvas.addEventListener('touchmove', updateTouches, { passive: false });
-    canvas.addEventListener('touchend', updateTouches, { passive: false });
-    canvas.addEventListener('touchcancel', updateTouches, { passive: false });
+    if (permissionGranted === true) {
+      canvas.addEventListener('touchstart', updateTouches, { passive: false });
+      canvas.addEventListener('touchmove', updateTouches, { passive: false });
+      canvas.addEventListener('touchend', updateTouches, { passive: false });
+      canvas.addEventListener('touchcancel', updateTouches, { passive: false });
+    }
 
     const context = canvas.getContext('2d');
     let frame = 0;
@@ -144,15 +147,18 @@ export function SensorsTest() {
 
     return () => {
       window.removeEventListener('resize', resizeCanvas);
-      canvas.removeEventListener('touchstart', updateTouches);
-      canvas.removeEventListener('touchmove', updateTouches);
-      canvas.removeEventListener('touchend', updateTouches);
-      canvas.removeEventListener('touchcancel', updateTouches);
+      if (permissionGranted === true) {
+        canvas.removeEventListener('touchstart', updateTouches);
+        canvas.removeEventListener('touchmove', updateTouches);
+        canvas.removeEventListener('touchend', updateTouches);
+        canvas.removeEventListener('touchcancel', updateTouches);
+      }
       cancelAnimationFrame(frame);
     };
-  }, [results.sensors, setResult, touchSupported]);
+  }, [permissionGranted, results.sensors, setResult, touchSupported]);
 
   const undoTest = () => {
+    setPermissionGranted(null);
     setOrientation(null);
     setMotionData(null);
     setTouches([]);
@@ -169,7 +175,7 @@ export function SensorsTest() {
 
   return (
     <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="test-page mx-auto flex w-full max-w-[90rem] flex-col">
-      <TestPageHeader testId="T-09" testKey="sensors" title="Sensors" description="Monitor orientation, acceleration, and multi-touch input in real time." canUndoTest={orientation !== null || motionData !== null || touchDetected || touches.length > 0} onUndoTest={undoTest} />
+      <TestPageHeader testId="T-09" testKey="sensors" title="Sensors" description="Monitor orientation, acceleration, and multi-touch input in real time." canUndoTest={permissionGranted === true || orientation !== null || motionData !== null || touchDetected || touches.length > 0} onUndoTest={undoTest} />
 
       <div className="grid grid-cols-1 items-start gap-5 lg:grid-cols-[minmax(0,1.08fr)_minmax(20rem,.92fr)]">
         <Card className="instrument-panel">
@@ -177,7 +183,7 @@ export function SensorsTest() {
             <PanelHeading label="Motion telemetry" description="Live gyroscope and accelerometer readings." className="mb-5" />
             <div className="live-readout relative flex min-h-[300px] items-center justify-center overflow-hidden p-6">
               {permissionGranted === null && (
-                <div className="relative z-10 flex max-w-md flex-col items-center gap-5 text-center"><div className="test-hero-icon"><Smartphone className="h-8 w-8" /></div><div><h3 className="font-display text-lg font-bold">Sensor permission required</h3><p className="mt-2 text-sm text-muted-foreground">iOS requires explicit access before motion data can be read.</p></div><Button onClick={requestPermission} className="h-11 gap-2 font-semibold"><Smartphone className="h-4 w-4 shrink-0" /> Request Sensor Access</Button></div>
+                <div className="relative z-10 flex max-w-md flex-col items-center gap-5 text-center"><div className="test-hero-icon"><Smartphone className="h-8 w-8" /></div><div><h3 className="font-display text-lg font-bold">Sensor test stopped</h3><p className="mt-2 text-sm text-muted-foreground">Start the test to attach motion and touch listeners. iOS may show a browser permission prompt.</p></div><Button onClick={requestPermission} className="h-11 gap-2 font-semibold"><Smartphone className="h-4 w-4 shrink-0" /> Start Sensor Test</Button></div>
               )}
               {permissionGranted === false && <div className="relative z-10 flex max-w-md flex-col items-center gap-5 text-center"><div className="test-hero-icon border-status-idle/25 bg-status-idle/10 text-status-idle"><Compass className="h-8 w-8" /></div><div><h3 className="font-display text-lg font-bold">Motion sensors unavailable</h3><p className="mt-2 text-sm text-muted-foreground">No orientation events are exposed by this browser or device.</p></div></div>}
               {permissionGranted === true && (

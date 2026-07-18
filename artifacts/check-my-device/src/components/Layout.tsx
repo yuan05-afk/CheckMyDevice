@@ -60,7 +60,7 @@ export function Layout({ children }: { children: ReactNode }) {
       <footer className="border-t border-border py-4">
         <div className="container mx-auto max-w-5xl px-6 text-center">
           <p className="font-mono text-[9px] uppercase tracking-[0.18em] text-muted-foreground">
-            All processing local — no data transmitted — permissions on request only
+            All processing local · no data transmitted · permissions on request only
           </p>
         </div>
       </footer>

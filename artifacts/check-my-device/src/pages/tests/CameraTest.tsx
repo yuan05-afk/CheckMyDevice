@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { motion } from 'framer-motion';
-import { Camera as CameraIcon, Eye, LockKeyhole, ShieldAlert, Video } from 'lucide-react';
+import { Camera as CameraIcon, Eye, LockKeyhole, ShieldAlert, Video, VideoOff } from 'lucide-react';
 import { useTestContext } from '@/context/TestContext';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -26,6 +26,12 @@ export function CameraTest() {
     setStream(null);
   };
 
+  const stopCameraSession = () => {
+    requestIdRef.current += 1;
+    stopStream();
+    if (videoRef.current) videoRef.current.srcObject = null;
+  };
+
   const startCamera = async (deviceId?: string) => {
     setHasTestActivity(true);
     stopStream();
@@ -43,6 +49,7 @@ export function CameraTest() {
       setStream(nextStream);
       if (videoRef.current) videoRef.current.srcObject = nextStream;
       const deviceList = await navigator.mediaDevices.enumerateDevices();
+      if (requestId !== requestIdRef.current) return;
       const videoDevices = deviceList.filter((device) => device.kind === 'videoinput');
       setDevices(videoDevices);
       if (!selectedDeviceId && videoDevices.length > 0) setSelectedDeviceId(videoDevices[0].deviceId);
@@ -56,7 +63,19 @@ export function CameraTest() {
     }
   };
 
-  useEffect(() => () => stopStream(), []);
+  useEffect(() => {
+    const releaseCamera = () => {
+      requestIdRef.current += 1;
+      stopStream();
+      if (videoRef.current) videoRef.current.srcObject = null;
+    };
+
+    window.addEventListener('pagehide', releaseCamera);
+    return () => {
+      window.removeEventListener('pagehide', releaseCamera);
+      releaseCamera();
+    };
+  }, []);
 
   const undoTest = () => {
     requestIdRef.current += 1;
@@ -116,15 +135,20 @@ export function CameraTest() {
               )}
               <video ref={videoRef} autoPlay playsInline muted onLoadedMetadata={handleLoadedMetadata} className={`absolute inset-0 h-full w-full object-cover ${stream ? 'block' : 'hidden'}`} />
               {stream && (
-                <div className="absolute left-4 top-4 z-10 flex items-center gap-2 rounded-md border border-white/15 bg-black/45 px-3 py-2 font-mono text-[10px] uppercase tracking-[0.12em] text-white backdrop-blur-md">
-                  <span className="h-1.5 w-1.5 rounded-full bg-status-pass [animation:led-pulse_2s_ease-in-out_infinite]" /> Live preview
-                </div>
+                <>
+                  <div className="absolute left-4 top-4 z-10 flex items-center gap-2 rounded-md border border-white/15 bg-black/45 px-3 py-2 font-mono text-[10px] uppercase tracking-[0.12em] text-white backdrop-blur-md">
+                    <span className="h-1.5 w-1.5 rounded-full bg-status-pass [animation:led-pulse_2s_ease-in-out_infinite]" /> Live preview
+                  </div>
+                  <Button type="button" variant="secondary" onClick={stopCameraSession} className="absolute right-4 top-4 z-10 h-9 gap-2 border border-white/15 bg-black/45 px-3 text-xs font-semibold text-white backdrop-blur-md hover:bg-black/65 hover:text-white">
+                    <VideoOff className="h-4 w-4 shrink-0" /> Stop Camera
+                  </Button>
+                </>
               )}
             </div>
             <div className="mt-5 grid grid-cols-3 gap-3">
               <MetricTile label="Stream" value={stream ? 'Active' : 'Idle'} accent={Boolean(stream)} />
-              <MetricTile label="Resolution" value={videoInfo ? `${videoInfo.width}×${videoInfo.height}` : '—'} />
-              <MetricTile label="Cameras" value={devices.length || '—'} />
+              <MetricTile label="Resolution" value={videoInfo ? `${videoInfo.width}×${videoInfo.height}` : 'N/A'} />
+              <MetricTile label="Cameras" value={devices.length || 'N/A'} />
             </div>
           </CardContent>
         </Card>
@@ -141,8 +165,8 @@ export function CameraTest() {
                 </SelectContent>
               </Select>
               <div className="mt-5 space-y-3 border-t border-border/70 pt-4">
-                <div className="flex items-center justify-between text-sm"><span className="text-muted-foreground">Aspect ratio</span><span className="readout-value text-xs">{videoInfo ? (videoInfo.width / videoInfo.height).toFixed(2) : '—'}</span></div>
-                <div className="flex items-center justify-between text-sm"><span className="text-muted-foreground">Permission</span><span className="readout-value text-xs">{error ? 'Denied' : stream ? 'Granted' : 'Pending'}</span></div>
+                <div className="flex items-center justify-between text-sm"><span className="text-muted-foreground">Aspect ratio</span><span className="readout-value text-xs">{videoInfo ? (videoInfo.width / videoInfo.height).toFixed(2) : 'N/A'}</span></div>
+                <div className="flex items-center justify-between text-sm"><span className="text-muted-foreground">Camera access</span><span className="readout-value text-xs">{error ? 'Blocked' : stream ? 'In use' : hasTestActivity ? 'Released' : 'Not requested'}</span></div>
               </div>
             </CardContent>
           </Card>
@@ -162,7 +186,7 @@ export function CameraTest() {
           <Card className="instrument-panel">
             <CardContent className="p-5">
               <div className="flex items-center justify-between"><span className="panel-label">Result</span><TestStatusBadge status={results.camera} /></div>
-              <div className="mt-4 grid grid-cols-2 gap-3"><MetricTile label="Resolution" value={videoInfo ? `${videoInfo.width}×${videoInfo.height}` : '—'} accent={Boolean(videoInfo)} /><MetricTile label="Sources" value={devices.length || '—'} /></div>
+              <div className="mt-4 grid grid-cols-2 gap-3"><MetricTile label="Resolution" value={videoInfo ? `${videoInfo.width}×${videoInfo.height}` : 'N/A'} accent={Boolean(videoInfo)} /><MetricTile label="Sources" value={devices.length || 'N/A'} /></div>
             </CardContent>
           </Card>
         </div>

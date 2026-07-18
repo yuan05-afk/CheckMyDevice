@@ -22,10 +22,26 @@ const defaultResults: Record<TestId, TestStatus> = {
   sensors: 'untested',
 };
 
+const testIds = Object.keys(defaultResults) as TestId[];
+const validStatuses = new Set<TestStatus>(['untested', 'working', 'issue', 'unsupported']);
+
+function isTestStatus(value: unknown): value is TestStatus {
+  return typeof value === 'string' && validStatuses.has(value as TestStatus);
+}
+
 function loadStoredResults(): Record<TestId, TestStatus> {
   try {
     const stored = localStorage.getItem('checkmydevice-results');
-    if (stored) return { ...defaultResults, ...JSON.parse(stored) };
+    if (!stored) return defaultResults;
+
+    const parsed: unknown = JSON.parse(stored);
+    if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) return defaultResults;
+
+    const storedResults = parsed as Record<string, unknown>;
+    return testIds.reduce<Record<TestId, TestStatus>>((validated, testId) => {
+      if (isTestStatus(storedResults[testId])) validated[testId] = storedResults[testId];
+      return validated;
+    }, { ...defaultResults });
   } catch (error) {
     console.error('Failed to parse stored results', error);
   }
@@ -38,7 +54,11 @@ export function TestProvider({ children }: { children: ReactNode }) {
   const [results, setResults] = useState<Record<TestId, TestStatus>>(loadStoredResults);
 
   useEffect(() => {
-    localStorage.setItem('checkmydevice-results', JSON.stringify(results));
+    try {
+      localStorage.setItem('checkmydevice-results', JSON.stringify(results));
+    } catch (error) {
+      console.error('Failed to store test results', error);
+    }
   }, [results]);
 
   const setResult = useCallback((id: TestId, status: TestStatus) => {

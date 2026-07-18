@@ -23,7 +23,7 @@ import { SensorsTest } from '@/pages/tests/SensorsTest';
 function Router() {
   return (
     <Switch>
-      {/* Landing page — no Layout wrapper */}
+      {/* Landing page without the Layout wrapper */}
       <Route path="/" component={LandingPage} />
 
       {/* All other pages use the shared Layout */}

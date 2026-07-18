@@ -78,7 +78,7 @@
   --popover-foreground: 215 17% 9%;
   --popover-border: 214 13% 91%;
 
-  /* Signal teal — replaces indigo everywhere */
+  /* Signal teal: replaces indigo everywhere */
   --primary: 181 81% 31%;       /* #0F8B8D */
   --primary-foreground: 0 0% 100%;
 
@@ -164,7 +164,7 @@
     @apply bg-background text-foreground font-sans antialiased;
   }
 
-  /* Remove box-shadows in dark mode — rely on borders only */
+  /* Remove box-shadows in dark mode: rely on borders only */
   .dark * {
     --shadow-sm: none;
     --shadow: none;
@@ -190,7 +190,7 @@
   50% { opacity: 0.9; }
 }
 
-/* Continuous horizontal scroll — used by the live trace strip */
+/* Continuous horizontal scroll: used by the live trace strip */
 @keyframes trace-scroll {
   from { transform: translateX(0); }
   to   { transform: translateX(-50%); }
@@ -360,6 +360,7 @@
 .hero-backdrop-wash {
   position: absolute;
   inset: 0;
+  z-index: 1;
   background: radial-gradient(
     ellipse 42% 48% at 50% 55%,
     hsl(var(--background) / 0.24) 0,
@@ -375,6 +376,10 @@
     hsl(var(--background) / 0.04) 58%,
     transparent 80%
   );
+}
+
+.hero-portrait-devices {
+  display: none;
 }
 
 .hero-content-safe {
@@ -471,6 +476,105 @@
   }
 }
 
+@media (orientation: portrait) and (max-width: 1023px) {
+  .hero-chapter > .w-full {
+    align-items: flex-start;
+    padding: clamp(15.5rem, 32vh, 20rem) 0 5rem;
+  }
+
+  .hero-backdrop-art {
+    display: none;
+  }
+
+  .hero-portrait-devices {
+    position: absolute;
+    top: clamp(4rem, 8vh, 5.5rem);
+    left: 50%;
+    z-index: 2;
+    display: grid;
+    width: min(calc(100% - 1.5rem), 52rem);
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: clamp(0.35rem, 2vw, 1.5rem);
+    transform: translateX(-50%);
+  }
+
+  .hero-portrait-crop {
+    position: relative;
+    height: clamp(8.5rem, 26vw, 13rem);
+    min-width: 0;
+    overflow: hidden;
+  }
+
+  .hero-portrait-image {
+    position: absolute;
+    top: 50%;
+    width: 250%;
+    height: auto;
+    max-width: none;
+    opacity: 0;
+    transform: translateY(-72%);
+    transition: opacity 350ms ease;
+    user-select: none;
+  }
+
+  .hero-portrait-crop--laptop .hero-portrait-image {
+    left: 0;
+    clip-path: polygon(
+      0 45%,
+      19% 47%,
+      21% 75%,
+      34% 82%,
+      34% 92%,
+      22% 99%,
+      2% 90%
+    );
+    -webkit-mask-image: radial-gradient(
+      ellipse 34% 46% at 14% 78%,
+      #000 0 48%,
+      transparent 78%
+    );
+    mask-image: radial-gradient(
+      ellipse 34% 46% at 14% 78%,
+      #000 0 48%,
+      transparent 78%
+    );
+  }
+
+  .hero-portrait-crop--desktop .hero-portrait-image {
+    right: 0;
+    clip-path: polygon(
+      87% 45%,
+      100% 48%,
+      100% 88%,
+      91% 94%,
+      80% 86%,
+      80% 74%,
+      88% 69%
+    );
+    -webkit-mask-image: radial-gradient(
+      ellipse 27% 44% at 88% 76%,
+      #000 0 50%,
+      transparent 80%
+    );
+    mask-image: radial-gradient(
+      ellipse 27% 44% at 88% 76%,
+      #000 0 50%,
+      transparent 80%
+    );
+  }
+
+  .hero-portrait-image.hero-backdrop-image--light {
+    opacity: 0.92;
+  }
+
+  .dark .hero-portrait-image.hero-backdrop-image--light {
+    opacity: 0;
+  }
+
+  .dark .hero-portrait-image.hero-backdrop-image--night {
+    opacity: 0.92;
+  }
+}
 .diagnostic-typewriter::after {
   position: absolute;
   top: 0;
@@ -622,12 +726,6 @@
   color: hsl(var(--primary));
 }
 
-.trust-flow-connector > svg {
-  flex: 0 0 0.875rem;
-  margin-left: -3px;
-  overflow: visible;
-}
-
 .trust-flow-connector::before {
   height: 1px;
   flex: 1;
@@ -727,7 +825,7 @@
   font-size: 0.62rem;
 }
 
-@media (max-width: 767px) {
+@media (max-width: 1119px) {
   .trust-flow-track {
     display: flex;
     flex-direction: column;
@@ -761,14 +859,6 @@
 
   .trust-flow-connector > span {
     display: none;
-  }
-
-  .trust-flow-connector > svg {
-    flex: 0 0 0.875rem;
-    margin-top: -3px;
-    margin-left: 0;
-    overflow: visible;
-    transform: rotate(90deg);
   }
 
   .trust-flow-terminal {
@@ -857,7 +947,7 @@
   transform-origin: left center;
 }
 
-/* Keyboard — keys press down in typing sequence */
+/* Keyboard: keys press down in typing sequence */
 .group:hover .ti-k1 { animation: ti-keypress 1s ease infinite; }
 .group:hover .ti-k2 { animation: ti-keypress 1s ease 0.12s infinite; }
 .group:hover .ti-k3 { animation: ti-keypress 1s ease 0.24s infinite; }
@@ -867,7 +957,7 @@
   15%, 30% { transform: translateY(1.5px); opacity: 0.6; }
 }
 
-/* Mouse — scroll wheel bounces up and down */
+/* Mouse: scroll wheel bounces up and down */
 .group:hover .ti-mscroll {
   animation: ti-scroll 1.2s ease-in-out infinite;
 }
@@ -877,7 +967,7 @@
   50% { transform: translateY(2px); }
 }
 
-/* Camera — iris contracts and expands (auto-focus) */
+/* Camera: iris contracts and expands (auto-focus) */
 .group:hover .ti-iris {
   animation: ti-focus 1.5s ease-in-out infinite;
 }
@@ -888,7 +978,7 @@
   65% { transform: scale(1.4); opacity: 0.8; }
 }
 
-/* Microphone — sound wave arcs pulse on each side */
+/* Microphone: sound wave arcs pulse on each side */
 .group:hover .ti-snd1 { animation: ti-sound 1s ease-in-out infinite; }
 .group:hover .ti-snd2 { animation: ti-sound 1s ease-in-out 0.15s infinite; }
 
@@ -897,7 +987,7 @@
   50% { opacity: 0.8; transform: scaleX(1); }
 }
 
-/* Speaker — sound arcs pulse outward */
+/* Speaker: sound arcs pulse outward */
 .group:hover .ti-arc1 { animation: ti-pulse 1.2s ease-in-out infinite; }
 .group:hover .ti-arc2 { animation: ti-pulse 1.2s ease-in-out 0.2s infinite; }
 
@@ -906,7 +996,7 @@
   50% { opacity: 1; transform: translateX(1.5px); }
 }
 
-/* Display — scan line sweeps top to bottom */
+/* Display: scan line sweeps top to bottom */
 .group:hover .ti-scanln {
   animation: ti-scan 2s linear infinite;
 }
@@ -917,7 +1007,7 @@
   100% { transform: translateY(0); opacity: 0; }
 }
 
-/* Battery — fill bar charges + lightning bolt flashes */
+/* Battery: fill bar charges + lightning bolt flashes */
 .group:hover .ti-bfill {
   animation: ti-charge 2s ease-in-out infinite;
 }
@@ -936,7 +1026,7 @@
   50%, 70% { opacity: 0.9; }
 }
 
-/* Network — wifi arcs light up sequentially bottom to top */
+/* Network: wifi arcs light up sequentially bottom to top */
 .group:hover .ti-wf1 { animation: ti-wifi 1.5s ease-in-out infinite; }
 .group:hover .ti-wf2 { animation: ti-wifi 1.5s ease-in-out 0.15s infinite; }
 .group:hover .ti-wf3 { animation: ti-wifi 1.5s ease-in-out 0.3s infinite; }
@@ -946,7 +1036,7 @@
   50% { opacity: 1; }
 }
 
-/* Sensors — phone tilts side to side (gyroscope effect) */
+/* Sensors: phone tilts side to side (gyroscope effect) */
 .group:hover .ti-phone {
   animation: ti-tilt 1.8s ease-in-out infinite;
 }

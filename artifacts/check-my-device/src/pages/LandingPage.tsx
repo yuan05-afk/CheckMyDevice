@@ -110,6 +110,16 @@ function HeroBackdrop() {
           className="hero-backdrop-image hero-backdrop-image--night"
         />
       </motion.div>
+      <div className="hero-portrait-devices">
+        <div className="hero-portrait-crop hero-portrait-crop--laptop">
+          <img src={diagnosticHero} alt="" className="hero-portrait-image hero-backdrop-image--light" />
+          <img src={diagnosticHeroNight} alt="" className="hero-portrait-image hero-backdrop-image--night" />
+        </div>
+        <div className="hero-portrait-crop hero-portrait-crop--desktop">
+          <img src={diagnosticHero} alt="" className="hero-portrait-image hero-backdrop-image--light" />
+          <img src={diagnosticHeroNight} alt="" className="hero-portrait-image hero-backdrop-image--night" />
+        </div>
+      </div>
       <div className="hero-backdrop-wash" />
     </div>
   );
@@ -421,7 +431,7 @@ const trustSignals = [
 
 /* ─── Test modules ──────────────────────────────── */
 const modules = [
-  { id: 'keyboard',   num: 'T-01', label: 'KEYBOARD', title: 'Keyboard',        icon: Keyboard,     desc: 'Live QWERTY visualizer tracks every key — including modifiers and the numpad.' },
+  { id: 'keyboard',   num: 'T-01', label: 'KEYBOARD', title: 'Keyboard',        icon: Keyboard,     desc: 'Live QWERTY visualizer tracks every key, including modifiers and the numpad.' },
   { id: 'mouse',      num: 'T-02', label: 'MOUSE',    title: 'Mouse & Trackpad', icon: MousePointer2, desc: 'Canvas trail plots movement, clicks, scroll delta, and button mapping.' },
   { id: 'camera',     num: 'T-03', label: 'CAMERA',   title: 'Camera',           icon: Camera,       desc: 'Live preview with resolution readout and multi-source device switching.' },
   { id: 'microphone', num: 'T-04', label: 'MIC',      title: 'Microphone',       icon: Mic,          desc: 'Web Audio waveform oscilloscope and peak-level meter, updated in real time.' },
@@ -563,7 +573,7 @@ export function LandingPage() {
             <SectionIntro
               eyebrow="Test modules"
               title="Nine focused checks. One clear result."
-              description="From keys and clicks to camera, audio, display, power, and sensors—each check talks directly to your browser, never a remote testing service."
+              description="From keys and clicks to camera, audio, display, power, and sensors. Each check talks directly to your browser, never a remote testing service."
               id="modules-heading"
               icon={Activity}
             />
@@ -672,7 +682,6 @@ export function LandingPage() {
                       {signal.transition && (
                         <div className="trust-flow-connector" aria-hidden="true">
                           <span>{signal.transition}</span>
-                          <ArrowRight className="h-3.5 w-3.5" strokeWidth={1.8} />
                         </div>
                       )}
 
@@ -716,7 +725,7 @@ export function LandingPage() {
             <SectionIntro
               eyebrow="Privacy, itemized"
               title="Nothing hidden. Nothing uploaded."
-              description="A readable receipt of every privacy safeguard active during your session—so you can verify the promise instead of simply trusting it."
+              description="A readable receipt of every privacy safeguard active during your session, allowing you to verify the promise instead of simply trusting it."
               id="privacy-heading"
               icon={LockKeyhole}
             />

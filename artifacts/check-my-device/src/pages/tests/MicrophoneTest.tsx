@@ -280,12 +280,18 @@ export function MicrophoneTest() {
         canvas.height = parent.clientHeight;
       }
     };
+    const releaseMicrophone = () => {
+      requestIdRef.current += 1;
+      stopStream();
+      clearSample();
+    };
     window.addEventListener('resize', resizeCanvas);
+    window.addEventListener('pagehide', releaseMicrophone);
     resizeCanvas();
     return () => {
       window.removeEventListener('resize', resizeCanvas);
-      stopStream();
-      clearSample();
+      window.removeEventListener('pagehide', releaseMicrophone);
+      releaseMicrophone();
     };
   }, []);
 

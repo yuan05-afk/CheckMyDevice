@@ -336,7 +336,7 @@ export function NetworkTest() {
                     </div>
                     <Progress value={speedTest.progress} className="mt-5 h-2" />
                     <div className="mt-4 grid grid-cols-3 gap-2">
-                      <MetricTile label="Latency" value={speedTest.latencyMs != null ? `${speedTest.latencyMs} ms` : '—'} />
+                      <MetricTile label="Latency" value={speedTest.latencyMs != null ? `${speedTest.latencyMs} ms` : 'N/A'} />
                       <MetricTile label="Samples" value={speedTest.samples} />
                       <MetricTile label="Data" value={`${(speedTest.transferredBytes / 1_000_000).toFixed(1)} MB`} />
                     </div>
