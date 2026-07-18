@@ -8,11 +8,9 @@ Every diagnostic is guided, responsive, and privacy-first. Hardware readings are
 
 **[Open CheckMyDevice](https://checkmydevice.vercel.app/)** | [Explore the diagnostics](#diagnostic-modules) | [Read the privacy model](#privacy-model)
 
-<!-- Replace this placeholder with the final landing-page image, for example: ![CheckMyDevice landing page](docs/images/checkmydevice-landing.png) -->
+![CheckMyDevice landing page showing the privacy-first hardware diagnostic suite](docs/images/checkmydevice-landing.png)
 
-> **Landing-page screenshot placeholder**
->
-> Add a full-width screenshot of the CheckMyDevice home page here.
+
 
 ## Why CheckMyDevice
 
@@ -25,6 +23,8 @@ Every diagnostic is guided, responsive, and privacy-first. Hardware readings are
 - **Responsive interface:** The diagnostic workspace supports desktop, tablet, and mobile layouts, plus light and dark themes.
 
 ## Diagnostic modules
+
+![CheckMyDevice test modules page showing nine focused hardware diagnostic checks](docs/images/checkmydevice-tests.png)
 
 | ID | Test | What it verifies |
 | --- | --- | --- |
