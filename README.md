@@ -28,7 +28,7 @@ Every diagnostic is guided, responsive, and privacy-first. Hardware readings are
 
 | ID | Test | What it verifies |
 | --- | --- | --- |
-| T-01 | Keyboard | Full-size physical key codes, function row, navigation cluster, left and right modifiers, arrow keys, and numpad coverage. Operating-system-reserved keys are identified honestly. |
+| T-01 | Keyboard | Selectable layouts from full-size through 40% mini plus a Mac layout, with function-row, navigation, modifier, arrow, and numpad coverage where that layout includes them. Operating-system-reserved keys are identified honestly. |
 | T-02 | Mouse & Trackpad | Pointer movement, primary and secondary clicks, middle click, and scrolling inside an explicitly started test surface. |
 | T-03 | Camera | User-selected camera source, live local preview, stream state, aspect ratio, and reported resolution. A visible Stop Camera control releases the active stream. |
 | T-04 | Microphone | Live waveform, current level, peak level, and a five-second playback sample held temporarily in tab memory. |

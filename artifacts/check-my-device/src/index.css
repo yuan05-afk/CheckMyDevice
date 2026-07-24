@@ -1076,7 +1076,7 @@
 .dark .live-readout { background: linear-gradient(hsl(var(--primary) / 0.04), hsl(var(--primary) / 0.04)), repeating-linear-gradient(0deg, transparent 0 23px, hsl(var(--border) / 0.55) 24px), hsl(var(--card)); }
 @media (max-width: 639px) { .test-page::before { display: none; } .instrument-panel:hover { transform: none; } }
 
-/* ── Full-size keyboard layout ────────────────────────────────────────── */
+/* ── Keyboard layout variants ─────────────────────────────────────────── */
 .full-keyboard {
   display: grid;
   grid-template-columns: minmax(0, 3.55fr) minmax(0, 0.78fr) minmax(0, 1.05fr);
@@ -1084,6 +1084,20 @@
   width: 100%;
   height: clamp(10.5rem, 29vw, 18rem);
   overflow: hidden;
+}
+
+.full-keyboard[data-layout="tkl"] {
+  grid-template-columns: minmax(0, 4.2fr) minmax(0, 0.85fr);
+}
+
+.full-keyboard[data-layout="main-only"] {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.full-keyboard[data-layout-id="forty"] {
+  max-width: 36rem;
+  margin-inline: auto;
+  height: clamp(9.5rem, 22vw, 13.5rem);
 }
 
 .keyboard-main-grid,
@@ -1095,13 +1109,13 @@
 
 .keyboard-main-grid {
   display: grid;
-  grid-template-rows: repeat(6, minmax(0, 1fr));
+  grid-template-rows: repeat(var(--keyboard-rows, 6), minmax(0, 1fr));
   gap: clamp(0.12rem, 0.42vw, 0.4rem);
 }
 
 .keyboard-main-row {
   display: grid;
-  grid-template-columns: repeat(30, minmax(0, 1fr));
+  grid-template-columns: repeat(var(--keyboard-main-cols, 30), minmax(0, 1fr));
   gap: clamp(0.08rem, 0.28vw, 0.3rem);
   min-width: 0;
   min-height: 0;

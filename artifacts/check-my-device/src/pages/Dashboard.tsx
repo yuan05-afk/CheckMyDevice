@@ -16,7 +16,7 @@ import { Progress } from "@/components/ui/progress";
 import { useTestContext, TestId, TestStatus } from "@/context/TestContext";
 
 const tests = [
-  { id: 'keyboard',   num: 'T-01', label: 'KEYBOARD',  title: 'Keyboard',        description: 'Keys, numpad, modifiers',        icon: Keyboard,     path: '/test/keyboard' },
+  { id: 'keyboard',   num: 'T-01', label: 'KEYBOARD',  title: 'Keyboard',        description: 'Layouts, keys, modifiers',       icon: Keyboard,     path: '/test/keyboard' },
   { id: 'mouse',      num: 'T-02', label: 'MOUSE',     title: 'Mouse & Trackpad', description: 'Clicks, scroll, movement',      icon: MousePointer2, path: '/test/mouse' },
   { id: 'camera',     num: 'T-03', label: 'CAMERA',    title: 'Camera',           description: 'Video feed, resolution',        icon: Camera,       path: '/test/camera' },
   { id: 'microphone', num: 'T-04', label: 'MIC',       title: 'Microphone',       description: 'Audio input, levels',           icon: Mic,          path: '/test/microphone' },

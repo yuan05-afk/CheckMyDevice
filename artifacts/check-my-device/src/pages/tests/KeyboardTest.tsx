@@ -1,82 +1,40 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { motion } from 'framer-motion';
 import { Activity, Info, Keyboard } from 'lucide-react';
 import { useTestContext } from '@/context/TestContext';
 import { Card, CardContent } from '@/components/ui/card';
 import { TestPageHeader } from '@/components/TestPageHeader';
 import { TestStatusBadge } from '@/components/DiagnosticPrimitives';
+import { cn } from '@/lib/utils';
+import {
+  collectLayoutKeys,
+  defaultKeyboardLayoutId,
+  getKeyboardLayout,
+  keyboardLayouts,
+  type KeyDefinition,
+  type KeyboardLayoutId,
+} from './keyboardLayouts';
 
-type KeyDefinition = {
-  code: string;
-  label: string;
-  span?: number;
-};
-
-type MainSlot = KeyDefinition | { spacer: true; span: number };
-type PositionedKey = KeyDefinition & { column: number; row: number; columnSpan?: number; rowSpan?: number };
 type RecentKey = { label: string; code: string; timestamp: number };
 
-const key = (code: string, label: string, span = 2): KeyDefinition => ({ code, label, span });
-const spacer = (span: number): MainSlot => ({ spacer: true, span });
-
-const mainRows: MainSlot[][] = [
-  [key('Escape', 'Esc'), spacer(1), key('F1', 'F1'), key('F2', 'F2'), key('F3', 'F3'), key('F4', 'F4'), spacer(1), key('F5', 'F5'), key('F6', 'F6'), key('F7', 'F7'), key('F8', 'F8'), spacer(1), key('F9', 'F9'), key('F10', 'F10'), key('F11', 'F11'), key('F12', 'F12'), spacer(1)],
-  [key('Backquote', '`'), key('Digit1', '1'), key('Digit2', '2'), key('Digit3', '3'), key('Digit4', '4'), key('Digit5', '5'), key('Digit6', '6'), key('Digit7', '7'), key('Digit8', '8'), key('Digit9', '9'), key('Digit0', '0'), key('Minus', '-'), key('Equal', '='), key('Backspace', 'Backspace', 4)],
-  [key('Tab', 'Tab', 3), key('KeyQ', 'Q'), key('KeyW', 'W'), key('KeyE', 'E'), key('KeyR', 'R'), key('KeyT', 'T'), key('KeyY', 'Y'), key('KeyU', 'U'), key('KeyI', 'I'), key('KeyO', 'O'), key('KeyP', 'P'), key('BracketLeft', '['), key('BracketRight', ']'), key('Backslash', '\\', 3)],
-  [key('CapsLock', 'Caps', 4), key('KeyA', 'A'), key('KeyS', 'S'), key('KeyD', 'D'), key('KeyF', 'F'), key('KeyG', 'G'), key('KeyH', 'H'), key('KeyJ', 'J'), key('KeyK', 'K'), key('KeyL', 'L'), key('Semicolon', ';'), key('Quote', "'"), key('Enter', 'Enter', 4)],
-  [key('ShiftLeft', 'Shift', 5), key('KeyZ', 'Z'), key('KeyX', 'X'), key('KeyC', 'C'), key('KeyV', 'V'), key('KeyB', 'B'), key('KeyN', 'N'), key('KeyM', 'M'), key('Comma', ','), key('Period', '.'), key('Slash', '/'), key('ShiftRight', 'Shift', 5)],
-  [key('ControlLeft', 'Ctrl', 3), key('MetaLeft', 'Win', 3), key('AltLeft', 'Alt', 3), key('Space', 'Space', 11), key('AltRight', 'Alt', 3), key('MetaRight', 'Win', 3), key('ContextMenu', 'Menu', 2), key('ControlRight', 'Ctrl', 2)],
-];
-
-const navigationRows: Array<Array<KeyDefinition | null>> = [
-  [key('PrintScreen', 'PrtSc'), key('ScrollLock', 'ScrLk'), key('Pause', 'Pause')],
-  [null, null, null],
-  [key('Insert', 'Ins'), key('Home', 'Home'), key('PageUp', 'PgUp')],
-  [key('Delete', 'Del'), key('End', 'End'), key('PageDown', 'PgDn')],
-  [null, key('ArrowUp', '\u2191'), null],
-  [key('ArrowLeft', '\u2190'), key('ArrowDown', '\u2193'), key('ArrowRight', '\u2192')],
-];
-
-const numpadKeys: PositionedKey[] = [
-  { ...key('NumLock', 'Num'), column: 1, row: 2 },
-  { ...key('NumpadDivide', '/'), column: 2, row: 2 },
-  { ...key('NumpadMultiply', '*'), column: 3, row: 2 },
-  { ...key('NumpadSubtract', '-'), column: 4, row: 2 },
-  { ...key('Numpad7', '7'), column: 1, row: 3 },
-  { ...key('Numpad8', '8'), column: 2, row: 3 },
-  { ...key('Numpad9', '9'), column: 3, row: 3 },
-  { ...key('NumpadAdd', '+'), column: 4, row: 3, rowSpan: 2 },
-  { ...key('Numpad4', '4'), column: 1, row: 4 },
-  { ...key('Numpad5', '5'), column: 2, row: 4 },
-  { ...key('Numpad6', '6'), column: 3, row: 4 },
-  { ...key('Numpad1', '1'), column: 1, row: 5 },
-  { ...key('Numpad2', '2'), column: 2, row: 5 },
-  { ...key('Numpad3', '3'), column: 3, row: 5 },
-  { ...key('NumpadEnter', 'Enter'), column: 4, row: 5, rowSpan: 2 },
-  { ...key('Numpad0', '0'), column: 1, row: 6, columnSpan: 2 },
-  { ...key('NumpadDecimal', '.'), column: 3, row: 6 },
-];
-
-const allKeys = [
-  ...mainRows.flatMap((row) => row.filter((slot): slot is KeyDefinition => !('spacer' in slot))),
-  ...navigationRows.flatMap((row) => row.filter((slot): slot is KeyDefinition => slot !== null)),
-  ...numpadKeys,
-];
-
-const testableCodes = new Set(allKeys.map(({ code }) => code));
 const systemHandledCodes = new Set(['PrintScreen', 'MetaLeft', 'MetaRight', 'ContextMenu', 'Pause']);
 const modifierCodes = new Set(['ShiftLeft', 'ShiftRight', 'ControlLeft', 'ControlRight', 'AltLeft', 'AltRight', 'MetaLeft', 'MetaRight']);
+/** OS often swallows keydown for these; browsers usually only emit keyup. */
+const keyUpDetectableCodes = new Set(['PrintScreen', 'Pause']);
 const AUTO_PASS_KEY_COUNT = 10;
-
-function resolveLayoutCode(event: KeyboardEvent): string | null {
-  return testableCodes.has(event.code) ? event.code : null;
-}
 
 function blockBrowserAction(event: KeyboardEvent) {
   if (event.cancelable) {
     event.preventDefault();
     event.stopPropagation();
   }
+}
+
+function resolvePrintScreenCode(event: KeyboardEvent): boolean {
+  return event.code === 'PrintScreen'
+    || event.key === 'PrintScreen'
+    || event.keyCode === 44
+    || event.which === 44;
 }
 
 function KeyboardKey({
@@ -106,15 +64,28 @@ function KeyboardKey({
 
 export function KeyboardTest() {
   const { results, setResult } = useTestContext();
+  const [layoutId, setLayoutId] = useState<KeyboardLayoutId>(defaultKeyboardLayoutId);
   const [testedCodes, setTestedCodes] = useState<Set<string>>(new Set());
   const [heldCodes, setHeldCodes] = useState<Set<string>>(new Set());
   const [pressCount, setPressCount] = useState(0);
   const [recentKeys, setRecentKeys] = useState<RecentKey[]>([]);
+  const testedCodesRef = useRef(testedCodes);
+  testedCodesRef.current = testedCodes;
+
+  const layout = useMemo(() => getKeyboardLayout(layoutId), [layoutId]);
+  const layoutKeys = useMemo(() => collectLayoutKeys(layout), [layout]);
+  const testableCodes = useMemo(() => new Set(layoutKeys.map(({ code }) => code)), [layoutKeys]);
+
+  const resolveLayoutCode = useCallback((event: KeyboardEvent): string | null => {
+    if (testableCodes.has(event.code)) return event.code;
+    // PrintScreen is inconsistently reported across browsers/OS screenshot hooks.
+    if (testableCodes.has('PrintScreen') && resolvePrintScreenCode(event)) return 'PrintScreen';
+    return null;
+  }, [testableCodes]);
 
   const registerKeyActivity = useCallback((event: KeyboardEvent) => {
     const layoutCode = resolveLayoutCode(event);
     const displayCode = layoutCode ?? event.code;
-
 
     if (!event.repeat) {
       setPressCount((previous) => previous + 1);
@@ -132,8 +103,7 @@ export function KeyboardTest() {
     if (layoutCode) {
       setTestedCodes((previous) => new Set(previous).add(layoutCode));
     }
-
-  }, []);
+  }, [resolveLayoutCode]);
 
   const handleKeyDown = useCallback((event: KeyboardEvent) => {
     blockBrowserAction(event);
@@ -143,6 +113,12 @@ export function KeyboardTest() {
   const handleKeyUp = useCallback((event: KeyboardEvent) => {
     blockBrowserAction(event);
     const layoutCode = resolveLayoutCode(event);
+
+    // PrintScreen / Pause often never emit keydown — count them on keyup instead.
+    if (layoutCode && keyUpDetectableCodes.has(layoutCode) && !testedCodesRef.current.has(layoutCode)) {
+      registerKeyActivity(event);
+    }
+
     if (layoutCode && modifierCodes.has(layoutCode)) {
       setHeldCodes((previous) => {
         const next = new Set(previous);
@@ -150,8 +126,7 @@ export function KeyboardTest() {
         return next;
       });
     }
-
-  }, []);
+  }, [registerKeyActivity, resolveLayoutCode]);
 
   useEffect(() => {
     const clearHeldKeys = () => setHeldCodes(new Set());
@@ -165,21 +140,25 @@ export function KeyboardTest() {
     };
   }, [handleKeyDown, handleKeyUp]);
 
-
   const totalKeys = testableCodes.size;
-  const testedCount = useMemo(() => [...testedCodes].filter((code) => testableCodes.has(code)).length, [testedCodes]);
-  const progress = Math.round((testedCount / totalKeys) * 100);
+  const testedCount = useMemo(
+    () => [...testedCodes].filter((code) => testableCodes.has(code)).length,
+    [testedCodes, testableCodes],
+  );
+  const progress = totalKeys > 0 ? Math.round((testedCount / totalKeys) * 100) : 0;
 
   useEffect(() => {
     if (testedCount >= AUTO_PASS_KEY_COUNT && results.keyboard === 'untested') {
       setResult('keyboard', 'working');
     }
-  }, [testedCount, pressCount]);
+  }, [testedCount, pressCount, results.keyboard, setResult]);
+
+  const isMacLayout = layout.platform === 'mac';
   const modifierState = [
     { label: 'Shift', active: heldCodes.has('ShiftLeft') || heldCodes.has('ShiftRight'), detected: testedCodes.has('ShiftLeft') || testedCodes.has('ShiftRight') },
-    { label: 'Ctrl', active: heldCodes.has('ControlLeft') || heldCodes.has('ControlRight'), detected: testedCodes.has('ControlLeft') || testedCodes.has('ControlRight') },
-    { label: 'Alt', active: heldCodes.has('AltLeft') || heldCodes.has('AltRight'), detected: testedCodes.has('AltLeft') || testedCodes.has('AltRight') },
-    { label: 'Win / Cmd', active: heldCodes.has('MetaLeft') || heldCodes.has('MetaRight'), detected: testedCodes.has('MetaLeft') || testedCodes.has('MetaRight') },
+    { label: isMacLayout ? 'Control' : 'Ctrl', active: heldCodes.has('ControlLeft') || heldCodes.has('ControlRight'), detected: testedCodes.has('ControlLeft') || testedCodes.has('ControlRight') },
+    { label: isMacLayout ? 'Option' : 'Alt', active: heldCodes.has('AltLeft') || heldCodes.has('AltRight'), detected: testedCodes.has('AltLeft') || testedCodes.has('AltRight') },
+    { label: isMacLayout ? 'Cmd' : 'Win', active: heldCodes.has('MetaLeft') || heldCodes.has('MetaRight'), detected: testedCodes.has('MetaLeft') || testedCodes.has('MetaRight') },
   ];
 
   const isKeyHeld = (code: string) => heldCodes.has(code);
@@ -191,13 +170,18 @@ export function KeyboardTest() {
     setRecentKeys([]);
   };
 
+  const selectLayout = (nextId: KeyboardLayoutId) => {
+    setLayoutId(nextId);
+    setHeldCodes(new Set());
+  };
+
   return (
     <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="test-page mx-auto flex w-full max-w-[90rem] flex-col">
       <TestPageHeader
         testId="T-01"
         testKey="keyboard"
         title="Keyboard"
-        description="Test a full-size keyboard, including navigation keys, left/right modifiers, and the numpad."
+        description={layout.description}
         canUndoTest={testedCodes.size > 0 || heldCodes.size > 0 || pressCount > 0 || recentKeys.length > 0}
         onUndoTest={undoTest}
       />
@@ -286,23 +270,69 @@ export function KeyboardTest() {
       <div className="min-w-0">
         <Card className="instrument-panel min-w-0">
           <CardContent className="p-3 sm:p-5">
-            <div className="mb-5 flex items-center justify-between gap-4">
-              <div>
-                <h2 className="panel-label">Full-size layout</h2>
-                <p className="mt-2 text-sm text-muted-foreground">Each physical key code is counted once and lights independently.</p>
+            <div className="mb-4 flex flex-col gap-4 sm:mb-5 sm:flex-row sm:items-start sm:justify-between">
+              <div className="min-w-0">
+                <h2 className="panel-label">Interactive layout</h2>
+                <div className="mt-2 flex flex-wrap items-baseline gap-x-3 gap-y-1">
+                  <h3 className="font-display text-xl font-semibold tracking-tight text-foreground sm:text-2xl">
+                    {layout.name}
+                  </h3>
+                  <span className="rounded-md border border-primary/25 bg-primary/10 px-2 py-0.5 font-mono text-[10px] font-semibold tracking-wide text-primary">
+                    {layout.sizeLabel} · {layout.keyCount} keys
+                  </span>
+                </div>
               </div>
-              <div className="metric-tile flex shrink-0 items-center gap-2 px-3 py-2">
+              <div className="metric-tile flex shrink-0 items-center gap-2 self-start px-3 py-2">
                 <Keyboard className="h-4 w-4 text-primary" />
                 <span className="readout-value text-xs tabular-nums">{testedCount} / {totalKeys}</span>
               </div>
             </div>
 
-            <div className="full-keyboard rounded-xl border border-border/70 bg-secondary/25 p-2 sm:p-3" aria-label="Full-size keyboard test layout">
+            <div className="mb-4">
+              <span className="spec-item mb-2 block">Keyboard type</span>
+              <div className="flex flex-wrap gap-2" role="radiogroup" aria-label="Keyboard layout">
+                {keyboardLayouts.map((preset) => {
+                  const selected = preset.id === layoutId;
+                  return (
+                    <button
+                      key={preset.id}
+                      type="button"
+                      role="radio"
+                      aria-checked={selected}
+                      onClick={() => selectLayout(preset.id)}
+                      className={cn(
+                        'metric-tile min-w-[5.75rem] px-3 py-2.5 text-left transition-[border-color,background-color,box-shadow] hover:border-primary/40 hover:bg-primary/5',
+                        selected && 'border-primary/65 bg-primary/10 shadow-sm ring-1 ring-primary/20',
+                      )}
+                    >
+                      <span className={cn('block font-mono text-[10px] font-semibold tracking-wide', selected ? 'text-primary' : 'text-foreground')}>
+                        {preset.sizeLabel}
+                      </span>
+                      <span className="mt-0.5 block text-[11px] font-medium text-foreground">{preset.name}</span>
+                      <span className={cn('mt-1 block font-mono text-[10px] tabular-nums', selected ? 'text-primary' : 'text-muted-foreground')}>
+                        {preset.keyCount} keys
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            <div
+              className="full-keyboard rounded-xl border border-border/70 bg-secondary/25 p-2 sm:p-3"
+              data-layout={layout.columns}
+              data-layout-id={layout.id}
+              style={{
+                '--keyboard-rows': layout.mainRows.length,
+                '--keyboard-main-cols': layout.mainColumnCount,
+              } as React.CSSProperties}
+              aria-label={`${layout.name} keyboard test layout`}
+            >
               <div className="keyboard-main-grid">
-                {mainRows.map((row, rowIndex) => (
+                {layout.mainRows.map((row, rowIndex) => (
                   <div className="keyboard-main-row" key={rowIndex}>
                     {row.map((slot, slotIndex) => 'spacer' in slot
-                      ? <span key={`spacer-${slotIndex}`} style={{ gridColumn: `span ${slot.span}` }} aria-hidden="true" />
+                      ? <span key={`spacer-${rowIndex}-${slotIndex}`} style={{ gridColumn: `span ${slot.span}` }} aria-hidden="true" />
                       : (
                         <KeyboardKey
                           key={slot.code}
@@ -316,34 +346,38 @@ export function KeyboardTest() {
                 ))}
               </div>
 
-              <div className="keyboard-navigation-grid">
-                {navigationRows.flatMap((row, rowIndex) => row.map((definition, columnIndex) => definition
-                  ? (
+              {layout.navigationRows && (
+                <div className="keyboard-navigation-grid">
+                  {layout.navigationRows.flatMap((row, rowIndex) => row.map((definition, columnIndex) => definition
+                    ? (
+                      <KeyboardKey
+                        key={definition.code}
+                        definition={definition}
+                        tested={testedCodes.has(definition.code)}
+                        held={isKeyHeld(definition.code)}
+                        style={{ gridColumn: columnIndex + 1, gridRow: rowIndex + 1 }}
+                      />
+                    )
+                    : <span key={`nav-spacer-${rowIndex}-${columnIndex}`} style={{ gridColumn: columnIndex + 1, gridRow: rowIndex + 1 }} aria-hidden="true" />))}
+                </div>
+              )}
+
+              {layout.numpadKeys && (
+                <div className="keyboard-numpad-grid">
+                  {layout.numpadKeys.map((definition) => (
                     <KeyboardKey
                       key={definition.code}
                       definition={definition}
                       tested={testedCodes.has(definition.code)}
                       held={isKeyHeld(definition.code)}
-                      style={{ gridColumn: columnIndex + 1, gridRow: rowIndex + 1 }}
+                      style={{
+                        gridColumn: `${definition.column} / span ${definition.columnSpan || 1}`,
+                        gridRow: `${definition.row} / span ${definition.rowSpan || 1}`,
+                      }}
                     />
-                  )
-                  : <span key={`nav-spacer-${rowIndex}-${columnIndex}`} style={{ gridColumn: columnIndex + 1, gridRow: rowIndex + 1 }} aria-hidden="true" />))}
-              </div>
-
-              <div className="keyboard-numpad-grid">
-                {numpadKeys.map((definition) => (
-                  <KeyboardKey
-                    key={definition.code}
-                    definition={definition}
-                    tested={testedCodes.has(definition.code)}
-                    held={isKeyHeld(definition.code)}
-                    style={{
-                      gridColumn: `${definition.column} / span ${definition.columnSpan || 1}`,
-                      gridRow: `${definition.row} / span ${definition.rowSpan || 1}`,
-                    }}
-                  />
-                ))}
-              </div>
+                  ))}
+                </div>
+              )}
             </div>
 
             <div className="mt-5 flex items-center gap-3 rounded-lg border border-border/60 bg-background/55 px-4 py-3">
@@ -355,11 +389,10 @@ export function KeyboardTest() {
 
             <div className="mt-3 flex items-start gap-2 rounded-lg border border-primary/15 bg-primary/5 px-4 py-3 text-xs leading-relaxed text-muted-foreground">
               <Info className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
-              This test listens to physical keyboard events; the on-screen keycaps are read-only. Dashed keys may be intercepted by the operating system. Fn is intentionally excluded because laptop firmware usually handles it without sending a browser event.
+              This test listens to physical keyboard events; the on-screen keycaps are read-only. Choose the layout that matches your board so remaining counts stay honest. Dashed keys may be intercepted by the operating system — Print Screen is counted on key release when the browser receives it. Fn is intentionally excluded because laptop firmware usually handles it without sending a browser event.
             </div>
           </CardContent>
         </Card>
-
       </div>
     </motion.div>
   );
